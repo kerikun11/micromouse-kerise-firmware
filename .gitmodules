@@ -1,0 +1,6 @@
+[submodule "lib/ctrl"]
+	path = lib/ctrl
+	url = git@github.com:kerikun11/micromouse-control-module.git
+[submodule "lib/maze"]
+	path = lib/maze
+	url = git@github.com:kerikun11/micromouse-maze-library.git

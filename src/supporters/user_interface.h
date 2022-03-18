@@ -98,8 +98,6 @@ class UserInterface {
         return -1;
       }
     }
-    /* it will not reach here */
-    return -1;
   }
   /**
    * @brief 前壁センサが遮られるのを待つ関数
@@ -193,20 +191,5 @@ class UserInterface {
         return false;
       }
     }
-  }
-  /**
-   * @brief バッテリー電圧をLEDで表示
-   * @param voltage [V]
-   */
-  void batteryLedIndicate(const float voltage) {
-    hw->led->set(0);
-    if (voltage < 4.0f)
-      hw->led->set(0x01);
-    else if (voltage < 4.1f)
-      hw->led->set(0x03);
-    else if (voltage < 4.2f)
-      hw->led->set(0x07);
-    else
-      hw->led->set(0x0F);
   }
 };

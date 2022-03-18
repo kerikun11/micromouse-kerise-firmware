@@ -90,7 +90,7 @@ class I2C {
                            const uint8_t* reg_data,
                            int reg_len,
                            const uint8_t* tx_data,
-                           int tx_len,  //
+                           int tx_len,
                            uint8_t* rx_data,
                            int rx_len,
                            TickType_t ticks_to_wait,

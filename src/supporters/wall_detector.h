@@ -11,6 +11,7 @@
 
 #include <cmath>    //< std::log
 #include <fstream>  //< for std::ifstream, std::ofstream
+#include <iomanip>
 #include <iostream>
 
 class WallDetector {

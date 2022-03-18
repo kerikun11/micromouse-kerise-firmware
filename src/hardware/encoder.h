@@ -16,7 +16,6 @@
 #include <freertospp/semphr.h>
 
 #include <cmath>
-#include <iomanip>
 #include <mutex>
 
 namespace hardware {
@@ -46,7 +45,10 @@ class Encoder {
         2048, this, 6, NULL, PRO_CPU_NUM);
     return true;
   }
-  int get_raw(uint8_t ch) const { return pulses_raw[ch]; }
+  int get_raw(uint8_t ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex);
+    return pulses_raw[ch];
+  }
   float get_position(uint8_t ch) {
     std::lock_guard<std::mutex> lock_guard(mutex);
     /* the reason the type of pulses is no problem with type int */
@@ -112,6 +114,8 @@ class Encoder {
                      (float(pulses_raw[1]) / pulses_size - 9.9e-1f + 0.5f)) -
         (-8.23007897574619f);
 #endif
+    /* lock values */
+    std::lock_guard<std::mutex> lock_guard(mutex);
     /* calculate physical value */
     float mm[2];
     for (int i = 0; i < 2; i++) {
@@ -129,7 +133,6 @@ class Encoder {
       mm[i] = (pulses_ovf[i] + float(pulses_raw[i]) / pulses_size) *
               SCALE_PULSES_TO_MM;
     }
-    std::lock_guard<std::mutex> lock_guard(mutex);
     /* fix rotation direction */
 #if KERISE_SELECT == 3 || KERISE_SELECT == 4
     positions[0] = +mm[0];

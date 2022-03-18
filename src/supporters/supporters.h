@@ -18,9 +18,9 @@ class Supporters {
 
  public:
   Supporters(hardware::Hardware* hw)
-      : hw(hw),                       //
-        ui(new UserInterface(hw)),    //
-        sc(new SpeedController(hw)),  //
+      : hw(hw),
+        ui(new UserInterface(hw)),
+        sc(new SpeedController(hw)),
         wd(new WallDetector(hw)) {}
   bool init() {
     if (!wd->init()) {

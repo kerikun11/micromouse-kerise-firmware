@@ -117,7 +117,7 @@ class Buzzer {
     }
   }
   void ledc_write_note(note_t note, uint8_t octave) {
-    static const uint32_t noteFrequencyBase[12] = {
+    static const uint32_t noteFrequencyBase[NOTE_MAX] = {
         // C    C#     D    Eb     E     F    F#     G    G#     A    Bb     B
         4186, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902};
     if (octave > 8 || note >= NOTE_MAX) {
@@ -129,14 +129,14 @@ class Buzzer {
     ledc_set_duty(mode, channel, 4);  //< duty in [0, 2^duty_resolution]
     ledc_update_duty(mode, channel);
   }
-  void note(const note_t note, uint8_t octave, uint32_t time_ms) {
+  void note(const note_t note, const uint8_t octave, const uint32_t dur_ms) {
     ledc_write_note(note, octave);
-    vTaskDelay(pdMS_TO_TICKS(time_ms));
+    vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
-  void mute(uint32_t time_ms = 200) {
+  void mute(uint32_t dur_ms = 200) {
     ledc_set_duty(mode, channel, 0);
     ledc_update_duty(mode, channel);
-    vTaskDelay(pdMS_TO_TICKS(time_ms));
+    vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
   void play_music(enum Music music) {
     switch (music) {

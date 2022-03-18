@@ -19,7 +19,7 @@
 class SpeedController {
  public:
   static constexpr const float Ts = 1e-3f;
-  static constexpr int acc_num = 4;
+  static constexpr const int acc_num = 4;
 
  public:
   /* 読み取り専用 */
@@ -68,9 +68,8 @@ class SpeedController {
     drive_enabled = true;
   }
   void disable() {
+    std::lock_guard<std::mutex> lock_guard(mutex);
     drive_enabled = false;
-    sampling_sync();
-    sampling_sync();
     hw->mt->free();
     hw->fan->drive(0);
   }
@@ -114,10 +113,10 @@ class SpeedController {
       update_odometry();
       /* notify app */
       data_ready_semaphore.give();
-      /* ToDo: wait for app here (reference update) */
       /* PID control */
       if (drive_enabled)
         drive();
+      /* ToDo: logging here */
     }
   }
   void update_samples() {

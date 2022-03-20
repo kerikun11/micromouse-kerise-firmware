@@ -24,16 +24,18 @@ class Logger {
   }
   void push(const std::vector<float>& data) { buf.push_back(data); }
   void print() const {
-    // header
+    if (buf.empty())
+      return;
+    /* header */
     std::printf("# KERISE v%d\n", KERISE_SELECT);
-    // labels
+    /* labels */
     std::printf("# ");
     for (int i = 0; i < labels.size(); ++i) {
       std::printf("%s", labels[i].c_str());
       i < labels.size() - 1 && std::printf("\t");
     }
     std::printf("\n");
-    // data
+    /* data */
     for (const auto& data : buf) {
       for (int i = 0; i < data.size(); ++i) {
         std::printf("%.3e", (double)data[i]);  //< printf supports only double

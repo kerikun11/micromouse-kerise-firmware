@@ -26,6 +26,30 @@
 #include <condition_variable>
 #include <mutex>
 
+/* ログ */
+#define ma_log_level 2
+#if ma_log_level >= 1
+#define ma_loge app_loge
+#else
+#define ma_loge(s)
+#endif
+#if ma_log_level >= 2
+#define ma_logw app_logw
+#else
+#define ma_logw(s)
+#endif
+#if ma_log_level >= 3
+#define ma_logi app_logi
+#else
+#define ma_logi(s)
+#endif
+#if ma_log_level >= 4
+#define ma_logd app_logd
+#else
+#define ma_logd(s)
+#endif
+#define ma_log_p ma_logd(sp->sc->est_p);
+
 class MoveAction {
  public:
   /* Action Category */
@@ -34,6 +58,18 @@ class MoveAction {
     TaskActionFastRun = 'F',
     TaskActionPositionRecovery = 'P',
   };
+  static const char* getTaskActionName(enum TaskAction action) {
+    switch (action) {
+      case TaskActionSearchRun:
+        return "TaskActionSearchRun";
+      case TaskActionFastRun:
+        return "TaskActionFastRun";
+      case TaskActionPositionRecovery:
+        return "TaskActionPositionRecovery";
+      default:
+        return "TaskActionUnknown";
+    }
+  }
   /* Run Parameters */
   struct RunParameter {
    public:
@@ -110,33 +146,40 @@ class MoveAction {
     xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
                 "MoveAction", 8192, this, 4, NULL);
   }
-
   void enable(const TaskAction ta) {
-    // set parameter
+    ma_logi("enable " << getTaskActionName(ta));
     this->task_action = ta;
-    // enable
     state_update(State::STATE_RUNNING);
   }
   void disable() {
+    ma_logi("disable " << getTaskActionName(task_action));
     if (state != State::STATE_DISABLED)
       state_update(State::STATE_BREAKING);
     state_wait(State::STATE_DISABLED);
+    flush_action();
   }
-  void waitForEndAction() {  //
+  void waitForEndAction() {
+    ma_logd(__func__ << " enter");
     state_wait(~State::STATE_RUNNING);
+    ma_logd(__func__ << " exit");
   }
   void enqueue_action(const MazeLib::RobotBase::SearchAction action) {
+    ma_logi("enqueue: " << MazeLib::RobotBase::getSearchActionName(action));
     sa_queue.push(action);
     if (state == STATE_WAITING)
       state_update(State::STATE_RUNNING);
   }
+  void flush_action() {
+    ma_logi(__func__);
+    while (!sa_queue.empty())
+      sa_queue.pop();
+  }
   void set_fast_path(const std::string& fast_path) {
     this->fast_path = fast_path;
-    // if (state == STATE_WAITING)
-    //   state_update(State::STATE_RUNNING);
   }
   void emergency_release() {
     if (hw->mt->is_emergency()) {
+      ma_logw(__func__);
       hw->bz->play(hardware::Buzzer::EMERGENCY);
       sp->sc->disable();
       hw->fan->drive(0);
@@ -146,13 +189,15 @@ class MoveAction {
       vTaskDelay(pdMS_TO_TICKS(100));
     }
   }
-  const auto& getSensedWalls() const { return is_wall; }
+  const auto& getSensedWalls() const {
+    return is_wall;  //
+  }
   void calibration() {
     hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
     hw->enc->clear_offset();
+    hw->imu->calibration();
   }
-  void set_unknown_accel_flag(bool flag) {
+  void set_unknown_accel_flag(const bool flag) {
     continue_straight_if_no_front_wall = flag;
   }
 
@@ -261,9 +306,9 @@ class MoveAction {
     hw->bz->play(result ? hardware::Buzzer::SUCCESSFUL
                         : hardware::Buzzer::CANCEL);
     sp->sc->set_target(0, 0);
-    vTaskDelay(pdMS_TO_TICKS(100));
     hw->tof->enable();  //< ToF の有効化を忘れずに！
-    sp->sc->reset();    //< 位置を補正
+    vTaskDelay(pdMS_TO_TICKS(100));
+    sp->sc->reset();  //< 位置を補正
     hw->led->set(0);
     return result;
   }
@@ -703,17 +748,17 @@ class MoveAction {
   void search_run_task() {
     const auto& rp = rp_search;
     /* スタート */
-    // sp->sc->reset();
-    // vTaskDelay(pdMS_TO_TICKS(100)); //< 緊急ループ防止の delay
     sp->sc->enable();
+    ma_log_p;
     /* とりあえず区画の中心に配置 */
     offset = ctrl::Pose(field::SegWidthFull / 2, field::SegWidthFull / 2);
     while (1) {
       /* 離脱確認 */
       if (is_break_state())
         break;
-      /* 壁を確認 */
+      /* 壁を確認 (区画の切り替わり位置にいるはず) */
       is_wall = sp->wd->is_wall;
+      ma_logd(sp->sc->est_p << " wall: " << sp->wd->get_info());
       /* 探索器に終了を通知 */
       if (sa_queue.empty())
         state_update(State::STATE_WAITING);
@@ -723,6 +768,7 @@ class MoveAction {
       /* 既知区間走行 */
       if (sa_queue.size() >= 2)
         search_run_known(rp);
+      ma_log_p;
       /* 探索走行 */
       if (!sa_queue.empty()) {
         const auto action = sa_queue.front();
@@ -730,10 +776,8 @@ class MoveAction {
         search_run_switch(action, rp);
       }
     }
-    // cleaning
-    while (!sa_queue.empty())
-      sa_queue.pop();
-    sp->sc->disable();
+    ma_log_p;
+    flush_action();
   }
   void search_run_queue_wait_decel(const RunParameter& rp) {
     /* Actionがキューされるまで減速しながら待つ */
@@ -780,8 +824,10 @@ class MoveAction {
     /* 既知区間走行 */
     if (path.size()) {
       /* 既知区間パターンに変換 */
+      ma_logd("search_actions: " << path);
       path =
           MazeLib::RobotBase::pathConvertSearchToKnown(path, rp.diag_enabled);
+      ma_logd("known_actions: " << path);
       /* 既知区間走行 */
       float straight = 0;
       for (int path_index = 0; path_index < path.length(); path_index++) {
@@ -807,6 +853,8 @@ class MoveAction {
                                continue_straight_if_no_front_wall &&
                                no_front_front_wall;
     const float v_s = rp.v_search;
+    ma_logi(
+        "SearchAction: " << MazeLib::RobotBase::getSearchActionName(action));
     switch (action) {
       case MazeLib::RobotBase::SearchAction::START_STEP:
         start_step(rp);
@@ -876,6 +924,8 @@ class MoveAction {
     /* 最短走行用にパターンを置換 */
     const auto path = MazeLib::RobotBase::pathConvertSearchToFast(
         search_actions, rp.diag_enabled);
+    ma_logi("search_actions: " << search_actions);
+    ma_logi("fast_actions: " << path);
     /* キャリブレーション */
     calibration();
     /* 壁に背中を確実につける */
@@ -920,6 +970,7 @@ class MoveAction {
   void fast_run_switch(const MazeLib::RobotBase::FastAction action,
                        float& straight,
                        const RunParameter& rp) {
+    ma_logd("FastAction: " << MazeLib::RobotBase::getFastActionName(action));
     switch (action) {
       case MazeLib::RobotBase::FastAction::F45_L:
         SlalomProcess(field::ShapeIndex::F45, 0, 0, straight, rp);
@@ -996,7 +1047,7 @@ class MoveAction {
     std::bitset<table_size> is_valid;
     std::array<uint16_t, table_size> table;
     table.fill(255);
-    /* start */
+    /* Start */
     sp->sc->enable();
     int index = 0;
     for (float t = 0; t < ad.t_end(); t += sp->sc->Ts) {

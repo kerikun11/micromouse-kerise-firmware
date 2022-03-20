@@ -61,7 +61,7 @@ class SpeedController {
       accel.clear({hw->imu->get_accel(), hw->imu->get_angular_accel()});
       fbc.reset();
     }
-    vTaskDelay(pdMS_TO_TICKS(100));  //< 緊急ループ防止の delay
+    // vTaskDelay(pdMS_TO_TICKS(50));  //< 緊急ループ防止の delay
   }
   void enable() {
     reset();
@@ -106,8 +106,9 @@ class SpeedController {
       /* sampling sync */
       hw->imu->sampling_sync();
       hw->enc->sampling_sync();
-      /* update data */
+      /* lock data */
       std::lock_guard<std::mutex> lock_guard(mutex);
+      /* update data */
       update_samples();
       update_estimator();
       update_odometry();

@@ -25,12 +25,12 @@ class Supporters {
   bool init() {
     if (!wd->init()) {
       hw->bz->play(hardware::Buzzer::ERROR);
-      app_loge << "WallDetector init failed" << std::endl;
+      APP_LOGE("WallDetector init failed");
       return false;
     }
     if (!sc->init()) {
       hw->bz->play(hardware::Buzzer::ERROR);
-      app_loge << "SpeedController init failed" << std::endl;
+      APP_LOGE("SpeedController init failed");
       return false;
     }
     return true;

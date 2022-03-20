@@ -27,16 +27,16 @@ class Encoder {
             std::array<gpio_num_t, ENCODER_NUM> pins_cs) {
 #if KERISE_SELECT == 4 || KERISE_SELECT == 3
     if (!as.init(spi_host, pins_cs[0])) {
-      app_loge << "AS5048A init failed :(" << std::endl;
+      APP_LOGE("AS5048A init failed :(");
       return false;
     }
 #elif KERISE_SELECT == 5
     if (!ma[0].init(spi_host, pins_cs[0])) {
-      app_loge << "Encoder L init failed :(" << std::endl;
+      APP_LOGE("MA730 L init failed :(");
       return false;
     }
     if (!ma[1].init(spi_host, pins_cs[1])) {
-      app_loge << "Encoder R init failed :(" << std::endl;
+      APP_LOGE("MA730 R init failed :(");
       return false;
     }
 #endif

@@ -52,7 +52,7 @@ class Reflector {
     std::cout << std::endl;
   }
   void print() const {
-    LOGI("Reflector: %4d %4d %4d %4d", read(0), read(1), read(2), read(3));
+    APP_LOGI("Reflector: %4d %4d %4d %4d", read(0), read(1), read(2), read(3));
   }
 
  private:

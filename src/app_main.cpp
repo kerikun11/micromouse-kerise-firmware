@@ -24,12 +24,12 @@ void kerise_main() {
   auto machine = new machine::Machine();
   machine->init();
   vTaskDelay(pdMS_TO_TICKS(1000));
-  LOGI("Free Heap: %u [Bytes]", esp_get_free_heap_size());
+  APP_LOGI("Free Heap: %u [Bytes]", esp_get_free_heap_size());
   vTaskDelay(portMAX_DELAY);
 }
 
 void devkit_main() {
-  LOGI("This is ESP32 DevKit");
+  APP_LOGI("This is ESP32 DevKit");
 #if 0
   auto *bz = hardware::Buzzer::get_instance();
   bz->init(BUZZER_PIN, BUZZER_LEDC_CHANNEL, BUZZER_LEDC_TIMER);
@@ -49,7 +49,7 @@ extern "C" void app_main() {
     case 0xD866'5A1D'A0D8:  //< KERISE v5
       return kerise_main();
     default:
-      LOGW("unknown ESP32 MAC: 0x%012llX", mac);
+      APP_LOGW("unknown ESP32 MAC: 0x%012llX", mac);
       return devkit_main();
   }
 }

@@ -35,7 +35,7 @@ class IMU {
   bool init(spi_host_device_t spi_host, std::array<int8_t, IMU_NUM> pins_cs) {
     for (int i = 0; i < IMU_NUM; ++i) {
       if (!icm[i].init(spi_host, pins_cs[i])) {
-        app_loge << "IMU " << i << " begin failed :(" << std::endl;
+        APP_LOGE("IMU[%d] init failed :(", i);
         return false;
       }
     }
@@ -54,17 +54,17 @@ class IMU {
     sampling_end_semaphore.take(xBlockTime);
   }
   void print() {
-    app_logi << "Gyro:"
+    app_logi("Gyro:"
              << "\t" << gyro.x  //
              << "\t" << gyro.y  //
              << "\t" << gyro.z  //
-             << std::endl;
-    app_logi << "Accel:"
+    );
+    app_logi("Accel:"
              << "\t" << accel.x  //
              << "\t" << accel.y  //
              << "\t" << accel.z  //
-             << std::endl;
-    app_logi << "Angle:\t" << angle << "\t" << angular_accel << std::endl;
+    );
+    app_logi("Angle:\t" << angle << "\t" << angular_accel);
   }
   void csv() {
     std::cout << "0," << gyro.x << "," << gyro.y << "," << gyro.z << std::endl;

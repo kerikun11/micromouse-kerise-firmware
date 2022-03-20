@@ -72,31 +72,30 @@ class WallDetector {
         "WallDetector", 4096, this, 3, NULL, PRO_CPU_NUM);
     return true;
   }
-  bool backup() {
-    std::ofstream of(WALL_DETECTOR_BACKUP_PATH, std::ios::binary);
+  bool backup(const char* filepath = WALL_DETECTOR_BACKUP_PATH) {
+    std::ofstream of(filepath, std::ios::binary);
     if (of.fail()) {
-      app_loge << "Can't open file. " << WALL_DETECTOR_BACKUP_PATH << std::endl;
+      APP_LOGE("Can't open file. filepath: %s", filepath);
       return false;
     }
     of.write((const char*)&wall_ref, sizeof(WallDetector::WallValue));
     return true;
   }
-  bool restore() {
-    std::ifstream f(WALL_DETECTOR_BACKUP_PATH, std::ios::binary);
+  bool restore(const char* filepath = WALL_DETECTOR_BACKUP_PATH) {
+    std::ifstream f(filepath, std::ios::binary);
     if (f.fail()) {
-      app_loge << "Can't open file. " << WALL_DETECTOR_BACKUP_PATH << std::endl;
+      APP_LOGE("Can't open file. filepath: %s", filepath);
       return false;
     }
     if (f.eof()) {
-      app_loge << "invalid file size. " << WALL_DETECTOR_BACKUP_PATH
-               << std::endl;
+      APP_LOGE("invalid file size. filepath: %s", filepath);
       return false;
     }
     f.read((char*)&wall_ref, sizeof(WallDetector::WallValue));
-    app_logi << "Wall Reference Restore:"
-             << "\t" << wall_ref.side[0] << "\t" << wall_ref.front[0]  //
-             << "\t" << wall_ref.front[1] << "\t" << wall_ref.side[1]  //
-             << std::endl;
+    app_logs_i << "Wall Reference Restored:"
+               << "\t" << wall_ref.side[0] << "\t" << wall_ref.front[0]  //
+               << "\t" << wall_ref.front[1] << "\t" << wall_ref.side[1]  //
+               << std::endl;
     return true;
   }
   void calibration_side() {
@@ -110,8 +109,8 @@ class WallDetector {
     }
     for (int i = 0; i < 2; i++)
       wall_ref.side[i] = sum[i] / ave_count;
-    app_logi << "Wall Calibration Side: " << wall_ref.side[0] << "\t"
-             << wall_ref.side[1] << std::endl;
+    app_logs_i << "Wall Calibration Side: " << wall_ref.side[0] << "\t"
+               << wall_ref.side[1] << std::endl;
     hw->tof->enable();
   }
   void calibration_front() {
@@ -125,12 +124,12 @@ class WallDetector {
     }
     for (int i = 0; i < 2; i++)
       wall_ref.front[i] = sum[i] / ave_count;
-    app_logi << "Wall Calibration Front: " << wall_ref.front[0] << "\t"
-             << wall_ref.front[1] << std::endl;
+    app_logs_i << "Wall Calibration Front: " << wall_ref.front[0] << "\t"
+               << wall_ref.front[1] << std::endl;
     hw->tof->enable();
   }
   void print() {
-    app_logi                                                        //
+    app_logs_i                                                      //
         << std::setw(10) << std::setfill(' ') << distance.side[0]   //
         << std::setw(10) << std::setfill(' ') << distance.front[0]  //
         << std::setw(10) << std::setfill(' ') << distance.front[1]  //
@@ -139,6 +138,18 @@ class WallDetector {
         << " " << (is_wall[2] ? "X" : "_")                          //
         << " " << (is_wall[1] ? "X" : "_")                          //
         << std::endl;
+  }
+  const char* get_info() {
+    static char str[128];
+    snprintf(str, sizeof(str),
+             "Dist:[%5.1f %5.1f %5.1f %5.1f] Wall:[%c %c %c] "
+             "ToF:[%3d mm %3d ms (%3d mm)]",
+             (double)distance.side[0], (double)distance.front[0],
+             (double)distance.front[1], (double)distance.side[1],
+             is_wall[0] ? 'X' : '_', is_wall[2] ? 'X' : '_',
+             is_wall[1] ? 'X' : '_', hw->tof->getDistance(),
+             hw->tof->passedTimeMs(), hw->tof->getRangeRaw());
+    return str;
   }
   void csv() {
     std::cout << "0";

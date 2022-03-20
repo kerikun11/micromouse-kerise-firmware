@@ -71,6 +71,7 @@ class Machine {
         break;
       case 15: /* ログの表示 */
         lgr->print();
+        app_log_dump();
         break;
     }
   }
@@ -87,7 +88,7 @@ class Machine {
     /* 探索状態のお知らせ */
     if (mr->getMaze().getWallRecords().empty())  //< 完全に未探索状態
       hw->bz->play(hardware::Buzzer::CONFIRM);
-    else if (mr->isComplete())  //< 完全に探索終了
+    else if (mr->isCompleted())  //< 完全に探索終了
       hw->bz->play(hardware::Buzzer::SUCCESSFUL);
     else if (mr->calcShortestDirections(true))  //< 探索中だが経路はある
       hw->bz->play(hardware::Buzzer::MAZE_RESTORE);
@@ -637,8 +638,8 @@ class Machine {
     enum LOG_SELECT log_select = LOG_PID;
     log_init(log_select);
     hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
     hw->enc->clear_offset();
+    hw->imu->calibration();
     /* parameter */
     const auto& shape = field::shapes[field::ShapeIndex::F180];
     const bool mirror = mode;
@@ -788,9 +789,9 @@ class Machine {
       hw->bz->play(result ? hardware::Buzzer::SUCCESSFUL
                           : hardware::Buzzer::CANCEL);
       sp->sc->set_target(0, 0);
+      hw->tof->enable();  //< ToF の有効化を忘れずに！
       vTaskDelay(pdMS_TO_TICKS(100));
-      hw->tof->enable();      //< ToF の有効化を忘れずに！
-      sp->sc->est_p.clear();  //< 位置を補正
+      sp->sc->reset();  //< 位置を補正
       hw->led->set(0);
       // ending
       sp->sc->disable();
@@ -807,7 +808,7 @@ class Machine {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
-      LOGI(
+      APP_LOGI(
           "Dist:[%5.1f %5.1f %5.1f %5.1f] Wall:[%c %c %c] "
           "ToF:[%3d mm %3d ms (%3d mm)]",
           (double)sp->wd->distance.side[0], (double)sp->wd->distance.front[0],
@@ -819,16 +820,16 @@ class Machine {
   }
   void show_info() {
     /* show info */
-    LOGI("I'm KERISE v%d.", KERISE_SELECT);
-    LOGI("IDF version:  %s", esp_get_idf_version());
-    LOGI("CPU Freq:     %u [MHz]", ets_get_cpu_frequency());
+    APP_LOGI("I'm KERISE v%d.", KERISE_SELECT);
+    APP_LOGI("IDF version:  %s", esp_get_idf_version());
+    APP_LOGI("CPU Freq:     %u [MHz]", ets_get_cpu_frequency());
     peripheral::SPIFFS::show_info();
   }
   bool check_chip() {
     auto mac = peripheral::ESP::get_mac();
     if (mac != model::MAC_ID) {
-      LOGW("MAC ID mismatched!");
-      LOGW("MAC ID: 0x%012llX != 0x%012llX", mac, model::MAC_ID);
+      APP_LOGW("MAC ID mismatched!");
+      APP_LOGW("MAC ID: 0x%012llX != 0x%012llX", mac, model::MAC_ID);
       return false;
     }
     return true;

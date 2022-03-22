@@ -34,26 +34,25 @@ using namespace MazeLib;
 #endif
 
 /* ログ */
-#define mr_log_level 2
-#if mr_log_level >= 1
-#define mr_loge app_loge
+#if MR_LOG_LEVEL >= 1
+#define MR_LOGE APP_LOGE
 #else
-#define mr_loge(s)
+#define MR_LOGE(s)
 #endif
-#if mr_log_level >= 2
-#define mr_logw app_logw
+#if MR_LOG_LEVEL >= 2
+#define MR_LOGW APP_LOGW
 #else
-#define mr_logw(s)
+#define MR_LOGW(s)
 #endif
-#if mr_log_level >= 3
-#define mr_logi app_logi
+#if MR_LOG_LEVEL >= 3
+#define MR_LOGI APP_LOGI
 #else
-#define mr_logi(s)
+#define MR_LOGI(s)
 #endif
-#if mr_log_level >= 4
-#define mr_logd app_logd
+#if MR_LOG_LEVEL >= 4
+#define MR_LOGD APP_LOGD
 #else
-#define mr_logd(s)
+#define MR_LOGD(s)
 #endif
 
 class MazeRobot : public RobotBase {
@@ -189,28 +188,28 @@ class MazeRobot : public RobotBase {
   bool autoRun(const bool isAutoParamSelect = false,
                const bool isPositionIdentificationAtFirst = false) {
     /* 自己位置復帰走行: 任意 -> 復帰 -> ゴール -> スタート */
-    mr_logd(__func__);
+    MR_LOGD("");
     if (isPositionIdentificationAtFirst) {
-      mr_logd(__func__);
+      MR_LOGD("");
       if (!auto_pi_run())
         return false;  //< 回収された
     }
     /* 探索走行: スタート -> ゴール -> スタート */
-    mr_logd(__func__);
+    MR_LOGD("");
     if (!calcShortestDirections(true)) {
-      mr_logd(__func__);
+      MR_LOGD("");
       if (!auto_search_run()) {
-        mr_logw(__func__);
+        MR_LOGW("");
         return false;  //< 回収された or 探索不能迷路
       }
     }
     /* 最短走行ループ: スタート -> ゴール -> スタート */
     while (1) {
       /* 5走終了 */
-      mr_logd(__func__);
+      MR_LOGD("");
       if (isAutoParamSelect && state.get_try_count_remain() <= 0) {
         hw->bz->play(hardware::Buzzer::COMPLETE);
-        mr_logd(__func__);
+        MR_LOGD("");
         if (sp->ui->waitForPickup(2000))
           return false;
       }
@@ -221,11 +220,11 @@ class MazeRobot : public RobotBase {
       if (isAutoParamSelect)
         auto_parameter_select();
       /* 最短走行 */
-      mr_logd(__func__);
+      MR_LOGD("");
       if (!auto_fast_run()) {
         if (!hw->mt->is_emergency())
           return false; /*< クラッシュではない場合キャンセル */
-        mr_logw(__func__);
+        MR_LOGW("");
         /* クラッシュ後の場合、自動復帰 */
         ma->emergency_release();
         // state.save(), esp_restart(); //< 緊急ループ対策
@@ -247,8 +246,8 @@ class MazeRobot : public RobotBase {
   State state;
   bool prevIsForceGoingToGoal = false; /*< ゴール判定用 */
 
-  /* override virtual functions */
  protected:
+  /* override virtual functions */
   void waitForEndAction() override {
     // vTaskDelay(pdMS_TO_TICKS(300));  //< 計算処理に時間がかかる場合を模擬
     ma->waitForEndAction();
@@ -256,17 +255,21 @@ class MazeRobot : public RobotBase {
       setBreakFlag();
   }
   void queueAction(const RobotBase::SearchAction action) override {
-    return ma->enqueue_action(action);
+    ma->enqueue_action(action);
+  }
+  void calibration() override { ma->calibration(); }
+  void startDequeue() override { ma->enable(MoveAction::TaskActionSearchRun); }
+  void stopDequeue() override { ma->disable(); }
+  void backupMazeToFlash() override { backup(); }
+  void discrepancyWithKnownWall() override {
+    hw->bz->play(hardware::Buzzer::ERROR);
+    MR_LOGW("discrepancy! pose: %s", getCurrentPose().toString());
   }
   void senseWalls(bool& left, bool& front, bool& right) override {
-    left = ma->getSensedWalls()[0];
-    right = ma->getSensedWalls()[1];
-    front = ma->getSensedWalls()[2];
+    left = ma->getSensedWalls().left;
+    right = ma->getSensedWalls().right;
+    front = ma->getSensedWalls().front;
   }
-  void backupMazeToFlash() override { backup(); }
-  void stopDequeue() override { ma->disable(); }
-  void startDequeue() override { ma->enable(MoveAction::TaskActionSearchRun); }
-  void calibration() override { ma->calibration(); }
   void calcNextDirectionsPreCallback() override {
     /* ゴール判定用フラグ */
     prevIsForceGoingToGoal = isForceGoingToGoal;
@@ -274,15 +277,15 @@ class MazeRobot : public RobotBase {
     if (!isForceBackToStart && state.no_more_time()) {
       setForceBackToStart();
       hw->bz->play(hardware::Buzzer::TIMEOUT);
-      mr_logi(__func__ << " timoout");
+      MR_LOGI("timoout");
     }
   }
   void calcNextDirectionsPostCallback(
       SearchAlgorithm::State oldState,
       SearchAlgorithm::State newState) override {
-    mr_logi(__func__ << " " << getCurrentPose() << " "
-                     << SearchAlgorithm::getStateString(oldState) << " -> "
-                     << SearchAlgorithm::getStateString(newState));
+    MR_LOGI("%s %s --> %s", getCurrentPose().toString(),
+            SearchAlgorithm::getStateString(oldState),
+            SearchAlgorithm::getStateString(newState));
     /* 未知区間加速の設定 */
     ma->set_unknown_accel_flag(getUnknownAccelFlag());
     /* ゴール判定 */
@@ -303,10 +306,6 @@ class MazeRobot : public RobotBase {
         newState != SearchAlgorithm::IMPOSSIBLE && !isForceBackToStart)
       hw->bz->play(hardware::Buzzer::COMPLETE);  //< 追加探索完了
   }
-  void discrepancyWithKnownWall() override {
-    hw->bz->play(hardware::Buzzer::ERROR);
-    mr_logw("discrepancy! pose: " << getCurrentPose());
-  }
   /* end of override virtual functions */
 
  private:
@@ -314,13 +313,13 @@ class MazeRobot : public RobotBase {
     /* 異常検出 */
     if (!isSolvable()) {
       hw->bz->play(hardware::Buzzer::ERROR);
-      mr_loge(__func__);
+      MR_LOGE("");
     }
     while (!isSolvable()) {
       maze.resetLastWalls(6);  //< 探索可能になるまで壁を消す
       if (getMaze().getWallRecords().empty()) {
         hw->bz->play(hardware::Buzzer::ERROR);
-        mr_loge(__func__);
+        MR_LOGE("");
         reset(); /*< reset maze and save */
       }
     }
@@ -328,21 +327,21 @@ class MazeRobot : public RobotBase {
   }
   bool auto_search_run() {
     /* 迷路のチェック */
-    mr_logd(__func__);
+    MR_LOGD("");
     if (!auto_maze_check())
       return false;
     /* 探索走行: スタート -> ゴール -> スタート */
     state.start_search_run();  //< 0 -> 1
     if (searchRun()) {
       hw->bz->play(hardware::Buzzer::COMPLETE);
-      mr_logd(__func__);
+      MR_LOGD("");
       return true;
     }
     /* エラー処理 */
     if (!isSolvable()) {
       /* 迷路異常の場合 */
       hw->bz->play(hardware::Buzzer::ERROR);
-      mr_loge(__func__);
+      MR_LOGE("");
       /* ToDo: 迷路を編集して探索を再開 */
       /* なお、ここでは姿勢復帰をせずに自己位置同定走行を開始できる． */
       return false;
@@ -353,7 +352,7 @@ class MazeRobot : public RobotBase {
       /* 探索中だった場合はクラッシュ後を想定して直近の壁を削除 */
       hw->bz->play(hardware::Buzzer::MAZE_BACKUP);
       maze.resetLastWalls(6);
-      mr_logw(__func__);
+      MR_LOGW("");
       /* 自動復帰走行 */
       return auto_pi_run();
     }
@@ -362,13 +361,13 @@ class MazeRobot : public RobotBase {
   }
   bool auto_fast_run() {
     /* 迷路のチェック */
-    mr_logd(__func__);
+    MR_LOGD("");
     if (!auto_maze_check())
       return false;
     /* 最短経路の作成 */
     if (!calcShortestDirections(ma->rp_fast.diag_enabled)) {
       hw->bz->play(hardware::Buzzer::ERROR);
-      mr_loge(__func__);
+      MR_LOGE("");
       return false;
     }
     const auto search_path =
@@ -383,7 +382,7 @@ class MazeRobot : public RobotBase {
     //< FastRun End
     if (hw->mt->is_emergency()) {
       state.end_fast_run(false);
-      mr_logw(__func__);
+      MR_LOGW("");
       return false;  //< クラッシュした
     }
     /* 最短成功 */
@@ -392,25 +391,25 @@ class MazeRobot : public RobotBase {
     if (sp->ui->waitForPickup())
       return false;  //< 回収された
     /* 帰る */
-    mr_logd(__func__);
+    MR_LOGD("");
     return endFastRunBackingToStartRun();
   }
   bool auto_pi_run() {
     /* 迷路のチェック */
-    mr_logd(__func__);
+    MR_LOGD("");
     auto_maze_check();
     /* 念のため */
     ma->emergency_release();
     /* 既知区間斜めを無効化 */
     ma->rp_search.diag_enabled = false;
     /* 自動復帰ループ: 姿勢復帰 -> 自己位置同定 -> ゴール -> スタート */
-    mr_logd(__func__);
+    MR_LOGD("");
     while (1) {
       /* 姿勢復帰ループ */
-      mr_logd(__func__);
+      MR_LOGD("");
       while (1) {
         /* 回収待ち */
-        mr_logd(__func__);
+        MR_LOGD("");
         if (sp->ui->waitForPickup())
           return false;
         /* 姿勢復帰走行 */
@@ -420,41 +419,41 @@ class MazeRobot : public RobotBase {
         /* 失敗したらもう一度 */
         if (hw->mt->is_emergency()) {
           ma->emergency_release();
-          mr_logw(__func__);
+          MR_LOGW("");
           continue;
         }
         /* 成功 */
         break;
       }
       /* 姿勢復帰完了。回収待ち */
-      mr_logd(__func__);
+      MR_LOGD("");
       if (sp->ui->waitForPickup())
         return false;
       /* ゴール区画の訪問を指定 */
       setForceGoingToGoal(!state.get_has_reached_goal());
       /* 自己位置同定走行 */
-      mr_logd(__func__);
+      MR_LOGD("");
       if (positionIdentifyRun())
         break;
       /* エラー処理 */
       if (hw->mt->is_emergency()) {
         ma->emergency_release();  //< 自己位置同定中にクラッシュ
-        mr_logw(__func__);
+        MR_LOGW("");
       } else {
         hw->bz->play(hardware::Buzzer::ERROR);  //< 自己位置同定に失敗
-        mr_loge(__func__);
+        MR_LOGE("");
       }
       /* 失敗した場合は再チャレ */
     }
     /* スタート位置に戻ってきた */
     hw->bz->play(hardware::Buzzer::COMPLETE);
-    mr_logd(__func__);
+    MR_LOGD("");
     return true;
   }
   bool auto_parameter_select() {
     /* 現在の状態に応じたパラメータ選択 */
     if (state.no_more_time()) {
-      mr_logd(__func__);
+      MR_LOGD("");
       /* 残り時間が足りない場合 */
       ma->rp_fast.down(state.running_parameter), state.running_parameter = 0;
       ma->rp_fast.up(1), state.running_parameter += 1;
@@ -463,7 +462,7 @@ class MazeRobot : public RobotBase {
       ma->rp_fast.diag_enabled = (state.get_try_count() == 1);
       hw->bz->play(hardware::Buzzer::TIMEOUT);
     } else if (state.get_fast_run_failed()) {
-      mr_logd(__func__);
+      MR_LOGD("");
       /* 最短走行中のクラッシュ後の場合 */
       if (state.get_at_least_fast_run_succeeded()) {
         /* 少なくとも1回は最短が成功している: パラメータを1落として再チャレ */
@@ -476,7 +475,7 @@ class MazeRobot : public RobotBase {
       }
       hw->bz->play(hardware::Buzzer::DOWN);
     } else {
-      mr_logd(__func__);
+      MR_LOGD("");
       /* 初回 or 完走した場合 */
       if (state.get_try_count() == 1)  //< 最短初回だけ特別にパラメータを上げる
         ma->rp_fast.up(3), state.running_parameter += 3;

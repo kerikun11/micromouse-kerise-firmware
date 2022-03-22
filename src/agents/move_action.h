@@ -27,28 +27,34 @@
 #include <mutex>
 
 /* ログ */
-#define ma_log_level 2
-#if ma_log_level >= 1
-#define ma_loge app_loge
+// #define MA_LOG_LEVEL 4
+#if MA_LOG_LEVEL >= 1
+#define MA_LOGE APP_LOGE
 #else
-#define ma_loge(s)
+#define MA_LOGE(...)
 #endif
-#if ma_log_level >= 2
-#define ma_logw app_logw
+#if MA_LOG_LEVEL >= 2
+#define MA_LOGW APP_LOGW
 #else
-#define ma_logw(s)
+#define MA_LOGW(...)
 #endif
-#if ma_log_level >= 3
-#define ma_logi app_logi
+#if MA_LOG_LEVEL >= 3
+#define MA_LOGI APP_LOGI
 #else
-#define ma_logi(s)
+#define MA_LOGI(...)
 #endif
-#if ma_log_level >= 4
-#define ma_logd app_logd
+#if MA_LOG_LEVEL >= 4
+#define MA_LOGD APP_LOGD
 #else
-#define ma_logd(s)
+#define MA_LOGD(...)
 #endif
-#define ma_log_p ma_logd(sp->sc->est_p);
+#define MA_LOG_POSE                                                    \
+  APP_LOGD("est_p: (%d.%.3d, %d.%.3d, %d.%.3d)", (int)sp->sc->est_p.x, \
+           (int)((sp->sc->est_p.x - (int)sp->sc->est_p.x) * 1000),     \
+           (int)sp->sc->est_p.y,                                       \
+           (int)((sp->sc->est_p.y - (int)sp->sc->est_p.y) * 1000),     \
+           (int)sp->sc->est_p.th,                                      \
+           (int)((sp->sc->est_p.th - (int)sp->sc->est_p.th) * 1000));
 
 class MoveAction {
  public:
@@ -147,30 +153,30 @@ class MoveAction {
                 "MoveAction", 8192, this, 4, NULL);
   }
   void enable(const TaskAction ta) {
-    ma_logi("enable " << getTaskActionName(ta));
+    MA_LOGI("%s", getTaskActionName(ta));
     this->task_action = ta;
     state_update(State::STATE_RUNNING);
   }
   void disable() {
-    ma_logi("disable " << getTaskActionName(task_action));
+    MA_LOGI("%s", getTaskActionName(task_action));
     if (state != State::STATE_DISABLED)
       state_update(State::STATE_BREAKING);
     state_wait(State::STATE_DISABLED);
     flush_action();
   }
   void waitForEndAction() {
-    ma_logd(__func__ << " enter");
+    MA_LOGD("enter");
     state_wait(~State::STATE_RUNNING);
-    ma_logd(__func__ << " exit");
+    MA_LOGD("exit");
   }
   void enqueue_action(const MazeLib::RobotBase::SearchAction action) {
-    ma_logi("enqueue: " << MazeLib::RobotBase::getSearchActionName(action));
+    MA_LOGI("%s", MazeLib::RobotBase::getSearchActionName(action));
     sa_queue.push(action);
     if (state == STATE_WAITING)
       state_update(State::STATE_RUNNING);
   }
   void flush_action() {
-    ma_logi(__func__);
+    MA_LOGD("");
     while (!sa_queue.empty())
       sa_queue.pop();
   }
@@ -179,7 +185,7 @@ class MoveAction {
   }
   void emergency_release() {
     if (hw->mt->is_emergency()) {
-      ma_logw(__func__);
+      MA_LOGW("");
       hw->bz->play(hardware::Buzzer::EMERGENCY);
       sp->sc->disable();
       hw->fan->drive(0);
@@ -190,9 +196,10 @@ class MoveAction {
     }
   }
   const auto& getSensedWalls() const {
-    return is_wall;  //
+    return walls;  //
   }
   void calibration() {
+    MA_LOGI("");
     hw->bz->play(hardware::Buzzer::CALIBRATION);
     hw->enc->clear_offset();
     hw->imu->calibration();
@@ -203,14 +210,16 @@ class MoveAction {
 
  private:
   ctrl::TrajectoryTracker::Gain tt_gain;
-  TaskAction task_action = TaskActionSearchRun;
   ctrl::Pose offset;
-  std::array<bool, 3> is_wall;
+  WallDetector::Walls walls;
   bool continue_straight_if_no_front_wall = false;
   typedef struct {
     bool prev_wall[2];
     float prev_x[2];
   } wall_cut_data_t;
+
+  /* TaskAction */
+  TaskAction task_action = TaskActionSearchRun;
 
   /* State Manager */
   enum State : uint8_t {
@@ -268,10 +277,10 @@ class MoveAction {
   bool front_wall_attach(bool force = false) {
     if (is_break_state())
       return false;
-    // 強制モードのときは1マス先の壁でも補正
+    /* 強制モードのときは1マス先の壁でも補正 */
     if (force && hw->tof->getDistance() > field::SegWidthFull * 4 / 3)
       return false;
-    // 通常モードのときは1マス以内
+    /* 通常モードのときは1マス以内 */
     if (!force && hw->tof->getDistance() > field::SegWidthFull)
       return false;
     /* wall_attach start */
@@ -462,7 +471,7 @@ class MoveAction {
       return;
     /* 左右それぞれ */
     for (int i = 0; i < 2; i++) {
-      bool wall = sp->wd->is_wall[i];
+      bool wall = sp->wd->walls.side[i];
       const float x = sp->sc->est_p.x;
       /* 壁の変化 */
       if (wall_cut_data.prev_wall[i] != wall) {
@@ -505,7 +514,7 @@ class MoveAction {
     v_max = unknown_accel ? rp.v_unknown_accel : v_max;
     /* 壁切れ用 */
     wall_cut_data_t wall_cut_data = {
-        .prev_wall = {sp->wd->is_wall[0], sp->wd->is_wall[1]},
+        .prev_wall = {sp->wd->walls.side[0], sp->wd->walls.side[1]},
         .prev_x = {sp->sc->est_p.x, sp->sc->est_p.x},
     };
     /* 前壁補正 */
@@ -673,7 +682,7 @@ class MoveAction {
     /* 前壁あり：横壁なし方向でターン */
     /* 前壁なし：横壁あり方向でターン */
     int dir = (sp->wd->distance.side[0] > sp->wd->distance.side[1]) ? -1 : 1;
-    dir = sp->wd->is_wall[2] ? -dir : dir;
+    dir = sp->wd->walls.front ? -dir : dir;
     if (front_wall_attach()) {
       turn(dir * PI);
     } else {
@@ -749,7 +758,7 @@ class MoveAction {
     const auto& rp = rp_search;
     /* スタート */
     sp->sc->enable();
-    ma_log_p;
+    MA_LOG_POSE;
     /* とりあえず区画の中心に配置 */
     offset = ctrl::Pose(field::SegWidthFull / 2, field::SegWidthFull / 2);
     while (1) {
@@ -757,8 +766,9 @@ class MoveAction {
       if (is_break_state())
         break;
       /* 壁を確認 (区画の切り替わり位置にいるはず) */
-      is_wall = sp->wd->is_wall;
-      ma_logd(sp->sc->est_p << " wall: " << sp->wd->get_info());
+      walls = sp->wd->walls;
+      MA_LOG_POSE;
+      MA_LOGD("wall: %s", sp->wd->get_info());
       /* 探索器に終了を通知 */
       if (sa_queue.empty())
         state_update(State::STATE_WAITING);
@@ -768,7 +778,7 @@ class MoveAction {
       /* 既知区間走行 */
       if (sa_queue.size() >= 2)
         search_run_known(rp);
-      ma_log_p;
+      MA_LOG_POSE;
       /* 探索走行 */
       if (!sa_queue.empty()) {
         const auto action = sa_queue.front();
@@ -776,7 +786,7 @@ class MoveAction {
         search_run_switch(action, rp);
       }
     }
-    ma_log_p;
+    MA_LOG_POSE;
     flush_action();
   }
   void search_run_queue_wait_decel(const RunParameter& rp) {
@@ -824,10 +834,10 @@ class MoveAction {
     /* 既知区間走行 */
     if (path.size()) {
       /* 既知区間パターンに変換 */
-      ma_logd("search_actions: " << path);
-      path =
-          MazeLib::RobotBase::pathConvertSearchToKnown(path, rp.diag_enabled);
-      ma_logd("known_actions: " << path);
+      MA_LOGD("search_actions: %s", path.c_str());
+      path = MazeLib::RobotBase::convertSearchPathToKnownPath(path,
+                                                              rp.diag_enabled);
+      MA_LOGD("known_actions: %s", path.c_str());
       /* 既知区間走行 */
       float straight = 0;
       for (int path_index = 0; path_index < path.length(); path_index++) {
@@ -853,8 +863,8 @@ class MoveAction {
                                continue_straight_if_no_front_wall &&
                                no_front_front_wall;
     const float v_s = rp.v_search;
-    ma_logi(
-        "SearchAction: " << MazeLib::RobotBase::getSearchActionName(action));
+    MA_LOGI("SearchAction: %s",
+            MazeLib::RobotBase::getSearchActionName(action));
     switch (action) {
       case MazeLib::RobotBase::SearchAction::START_STEP:
         start_step(rp);
@@ -872,7 +882,7 @@ class MoveAction {
         break;
       case MazeLib::RobotBase::SearchAction::TURN_L:
         if (sp->sc->est_p.x > 5.0f || sp->sc->ref_v.tra > v_s * 1.2f ||
-            (sp->wd->is_wall[2] &&
+            (sp->wd->walls.front &&
              std::abs(hw->tof->getDistance() - field::SegWidthFull) > 20)) {
           straight_x(field::SegWidthFull / 2, v_s, 0, rp);
           front_wall_attach();
@@ -882,7 +892,7 @@ class MoveAction {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 0);
           straight_x(st.getShape().straight_prev, v_s, v_s, rp);
-          if (sp->wd->is_wall[0])
+          if (sp->wd->walls.side[0])
             return wall_stop_aebs();
           trace(st, rp);
           straight_x(st.getShape().straight_post, v_s, v_s, rp);
@@ -890,7 +900,7 @@ class MoveAction {
         break;
       case MazeLib::RobotBase::SearchAction::TURN_R:
         if (sp->sc->est_p.x > 5.0f || sp->sc->ref_v.tra > v_s * 1.2f ||
-            (sp->wd->is_wall[2] &&
+            (sp->wd->walls.front &&
              std::abs(hw->tof->getDistance() - field::SegWidthFull) > 20)) {
           straight_x(field::SegWidthFull / 2, v_s, 0, rp);
           front_wall_attach();
@@ -900,7 +910,7 @@ class MoveAction {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 1);
           straight_x(st.getShape().straight_prev, v_s, v_s, rp);
-          if (sp->wd->is_wall[1])
+          if (sp->wd->walls.side[1])
             return wall_stop_aebs();
           trace(st, rp);
           straight_x(st.getShape().straight_post, v_s, v_s, rp);
@@ -922,10 +932,10 @@ class MoveAction {
     /* 走行パラメータを取得 */
     const auto& rp = rp_fast;
     /* 最短走行用にパターンを置換 */
-    const auto path = MazeLib::RobotBase::pathConvertSearchToFast(
+    const auto path = MazeLib::RobotBase::convertSearchPathToFastPath(
         search_actions, rp.diag_enabled);
-    ma_logi("search_actions: " << search_actions);
-    ma_logi("fast_actions: " << path);
+    MA_LOGI("search_actions: %s", search_actions.c_str());
+    MA_LOGI("fast_actions: %s", path.c_str());
     /* キャリブレーション */
     calibration();
     /* 壁に背中を確実につける */
@@ -970,7 +980,7 @@ class MoveAction {
   void fast_run_switch(const MazeLib::RobotBase::FastAction action,
                        float& straight,
                        const RunParameter& rp) {
-    ma_logd("FastAction: " << MazeLib::RobotBase::getFastActionName(action));
+    MA_LOGD("FastAction: %s", MazeLib::RobotBase::getFastActionName(action));
     switch (action) {
       case MazeLib::RobotBase::FastAction::F45_L:
         SlalomProcess(field::ShapeIndex::F45, 0, 0, straight, rp);

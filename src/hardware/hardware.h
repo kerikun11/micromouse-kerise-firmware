@@ -122,9 +122,9 @@ class Hardware {
   bool batteryCheck() {
     const float voltage = getBatteryVoltage();
     batteryLedIndicate(voltage);
-    app_logi("Battery Voltage: " << voltage << " [V]");
+    APP_LOGI("Battery Voltage: %f [V]", (double)voltage);
     if (voltage < thr_battery) {
-      app_logw("Battery Low!");
+      APP_LOGW("Battery Low!");
       return false;
     }
     return true;

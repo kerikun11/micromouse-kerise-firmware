@@ -54,17 +54,10 @@ class IMU {
     sampling_end_semaphore.take(xBlockTime);
   }
   void print() {
-    app_logi("Gyro:"
-             << "\t" << gyro.x  //
-             << "\t" << gyro.y  //
-             << "\t" << gyro.z  //
-    );
-    app_logi("Accel:"
-             << "\t" << accel.x  //
-             << "\t" << accel.y  //
-             << "\t" << accel.z  //
-    );
-    app_logi("Angle:\t" << angle << "\t" << angular_accel);
+    APP_LOGI("gy %10f %10f %10f ac: %10f %10f %10f th: %10f %10f",  //
+             (double)gyro.x, (double)gyro.y, (double)gyro.z, (double)accel.x,
+             (double)accel.y, (double)accel.z, (double)angle,
+             (double)angular_accel);
   }
   void csv() {
     std::cout << "0," << gyro.x << "," << gyro.y << "," << gyro.z << std::endl;

@@ -71,7 +71,7 @@ class Machine {
         break;
       case 15: /* ログの表示 */
         lgr->print();
-        app_log_dump();
+        APP_LOG_DUMP();
         break;
     }
   }
@@ -813,8 +813,8 @@ class Machine {
           "ToF:[%3d mm %3d ms (%3d mm)]",
           (double)sp->wd->distance.side[0], (double)sp->wd->distance.front[0],
           (double)sp->wd->distance.front[1], (double)sp->wd->distance.side[1],
-          sp->wd->is_wall[0] ? 'X' : '_', sp->wd->is_wall[2] ? 'X' : '_',
-          sp->wd->is_wall[1] ? 'X' : '_', hw->tof->getDistance(),
+          sp->wd->walls.side[0] ? 'X' : '_', sp->wd->walls.front ? 'X' : '_',
+          sp->wd->walls.side[1] ? 'X' : '_', hw->tof->getDistance(),
           hw->tof->passedTimeMs(), hw->tof->getRangeRaw());
     }
   }

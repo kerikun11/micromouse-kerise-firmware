@@ -53,11 +53,21 @@ class WallDetector {
       return ret;
     }
   };
+  struct Walls {
+    union {
+      struct {
+        bool left;
+        bool right;
+      };
+      bool side[2];
+    };
+    bool front;
+  };
 
  public:
   WallValue distance;
   WallValue distance_average;
-  std::array<bool, 3> is_wall;
+  Walls walls;
 
  private:
   hardware::Hardware* hw;
@@ -92,52 +102,44 @@ class WallDetector {
       return false;
     }
     f.read((char*)&wall_ref, sizeof(WallDetector::WallValue));
-    app_logs_i << "Wall Reference Restored:"
-               << "\t" << wall_ref.side[0] << "\t" << wall_ref.front[0]  //
-               << "\t" << wall_ref.front[1] << "\t" << wall_ref.side[1]  //
-               << std::endl;
+    APP_LOGI("Wall Reference Restored: %10f %10f %10f %10f",
+             (double)wall_ref.side[0], (double)wall_ref.front[0],
+             (double)wall_ref.front[1], (double)wall_ref.side[1]);
     return true;
   }
   void calibration_side() {
     hw->tof->disable();
+    vTaskDelay(pdMS_TO_TICKS(20));
     float sum[2] = {0.0f, 0.0f};
     const int ave_count = 500;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     for (int j = 0; j < ave_count; j++) {
       for (int i = 0; i < 2; i++)
         sum[i] += ref2dist(hw->rfl->side(i));
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
     for (int i = 0; i < 2; i++)
       wall_ref.side[i] = sum[i] / ave_count;
-    app_logs_i << "Wall Calibration Side: " << wall_ref.side[0] << "\t"
-               << wall_ref.side[1] << std::endl;
+    APP_LOGI("Wall Calibration Side: %10f %10f", (double)wall_ref.side[0],
+             (double)wall_ref.side[1]);
     hw->tof->enable();
   }
   void calibration_front() {
     hw->tof->disable();
+    vTaskDelay(pdMS_TO_TICKS(20));
     float sum[2] = {0.0f, 0.0f};
     const int ave_count = 500;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     for (int j = 0; j < ave_count; j++) {
       for (int i = 0; i < 2; i++)
         sum[i] += ref2dist(hw->rfl->front(i));
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
     for (int i = 0; i < 2; i++)
       wall_ref.front[i] = sum[i] / ave_count;
-    app_logs_i << "Wall Calibration Front: " << wall_ref.front[0] << "\t"
-               << wall_ref.front[1] << std::endl;
+    APP_LOGI("Wall Calibration Front: %10f %10f", (double)wall_ref.front[0],
+             (double)wall_ref.front[1]);
     hw->tof->enable();
-  }
-  void print() {
-    app_logs_i                                                      //
-        << std::setw(10) << std::setfill(' ') << distance.side[0]   //
-        << std::setw(10) << std::setfill(' ') << distance.front[0]  //
-        << std::setw(10) << std::setfill(' ') << distance.front[1]  //
-        << std::setw(10) << std::setfill(' ') << distance.side[1]   //
-        << "\t" << (is_wall[0] ? "X" : "_")                         //
-        << " " << (is_wall[2] ? "X" : "_")                          //
-        << " " << (is_wall[1] ? "X" : "_")                          //
-        << std::endl;
   }
   const char* get_info() {
     static char str[128];
@@ -146,11 +148,12 @@ class WallDetector {
              "ToF:[%3d mm %3d ms (%3d mm)]",
              (double)distance.side[0], (double)distance.front[0],
              (double)distance.front[1], (double)distance.side[1],
-             is_wall[0] ? 'X' : '_', is_wall[2] ? 'X' : '_',
-             is_wall[1] ? 'X' : '_', hw->tof->getDistance(),
+             walls.side[0] ? 'X' : '_', walls.front ? 'X' : '_',
+             walls.side[1] ? 'X' : '_', hw->tof->getDistance(),
              hw->tof->passedTimeMs(), hw->tof->getRangeRaw());
     return str;
   }
+  void print() { APP_LOGI("%s", get_info()); }
   void csv() {
     std::cout << "0";
     for (int i = 0; i < 4; ++i)
@@ -182,19 +185,19 @@ class WallDetector {
     // 前壁の更新
     int front_mm = hw->tof->getDistance();
     if (!hw->tof->isValid())
-      is_wall[2] = false;  //< ToFの測距範囲内に壁がない場合はinvalidになる
+      walls.front = false;  //< ToFの測距範囲内に壁がない場合はinvalidになる
     else if (front_mm < wall_threshold_front * 0.95f)
-      is_wall[2] = true;
+      walls.front = true;
     else if (front_mm > wall_threshold_front * 1.05f)
-      is_wall[2] = false;
+      walls.front = false;
 
     // 横壁の更新
     for (int i = 0; i < 2; i++) {
       const float value = distance.side[i];
       if (value < wall_threshold_side * 0.97f)
-        is_wall[i] = true;
+        walls.side[i] = true;
       else if (value > wall_threshold_side * 1.03f)
-        is_wall[i] = false;
+        walls.side[i] = false;
     }
   }
 

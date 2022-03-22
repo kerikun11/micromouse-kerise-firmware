@@ -21,22 +21,14 @@ void kerise_main() {
       .intr_type = GPIO_INTR_DISABLE,
   };
   ESP_ERROR_CHECK(gpio_config(&config));
+  /* machine */
   auto machine = new machine::Machine();
   machine->init();
-  vTaskDelay(pdMS_TO_TICKS(1000));
-  APP_LOGI("Free Heap: %u [Bytes]", esp_get_free_heap_size());
+  /* inifinit loop */
   vTaskDelay(portMAX_DELAY);
 }
 
-void devkit_main() {
-  APP_LOGI("This is ESP32 DevKit");
-#if 0
-  auto *bz = hardware::Buzzer::get_instance();
-  bz->init(BUZZER_PIN, BUZZER_LEDC_CHANNEL, BUZZER_LEDC_TIMER);
-  bz->play(hardware::Buzzer::BOOT);
-#endif
-  vTaskDelay(portMAX_DELAY);
-}
+void devkit_main();
 
 extern "C" void app_main() {
   /* Check ID */

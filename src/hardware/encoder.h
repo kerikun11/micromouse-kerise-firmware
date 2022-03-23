@@ -42,7 +42,7 @@ class Encoder {
 #endif
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "Encoder",
-        2048, this, 6, NULL, PRO_CPU_NUM);
+        2048, this, TASK_PRIORITY_ENCODER, NULL, PRO_CPU_NUM);
     return true;
   }
   int get_raw(uint8_t ch) {

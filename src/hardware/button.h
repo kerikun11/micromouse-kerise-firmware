@@ -23,7 +23,8 @@ class Button {
     ESP_ERROR_CHECK(gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY));
     flags = 0x00;
     xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "Button", configMINIMAL_STACK_SIZE, this, 1, NULL);
+                "Button", configMINIMAL_STACK_SIZE, this, TASK_PRIORITY_BUTTON,
+                NULL);
     return true;
   }
   union {

@@ -44,7 +44,8 @@ class SpeedController {
   bool init() {
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-        "SpeedCtrl", 4096, this, 5, NULL, PRO_CPU_NUM);
+        "SpeedCtrl", 4096, this, TASK_PRIORITY_SPEED_CONTROLLER, NULL,
+        PRO_CPU_NUM);
     return true;
   }
   void reset() {

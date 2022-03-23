@@ -41,7 +41,7 @@ class IMU {
     }
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "IMU",
-        4096, this, 6, NULL, PRO_CPU_NUM);
+        4096, this, TASK_PRIORITY_IMU, NULL, PRO_CPU_NUM);
     return true;
   }
   void calibration() {

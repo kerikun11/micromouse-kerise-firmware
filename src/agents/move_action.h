@@ -48,6 +48,7 @@
 #else
 #define MA_LOGD(...)
 #endif
+#if 1
 #define MA_LOG_POSE                                                    \
   APP_LOGD("est_p: (%d.%.3d, %d.%.3d, %d.%.3d)", (int)sp->sc->est_p.x, \
            (int)((sp->sc->est_p.x - (int)sp->sc->est_p.x) * 1000),     \
@@ -55,6 +56,9 @@
            (int)((sp->sc->est_p.y - (int)sp->sc->est_p.y) * 1000),     \
            (int)sp->sc->est_p.th,                                      \
            (int)((sp->sc->est_p.th - (int)sp->sc->est_p.th) * 1000));
+#else
+#define MA_LOG_POSE
+#endif
 
 class MoveAction {
  public:
@@ -150,7 +154,7 @@ class MoveAction {
     rp_search.diag_enabled = false;
     /* start */
     xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "MoveAction", 8192, this, 4, NULL);
+                "MoveAction", 8192, this, TASK_PRIORITY_MOVE_ACTION, NULL);
   }
   void enable(const TaskAction ta) {
     MA_LOGI("%s", getTaskActionName(ta));

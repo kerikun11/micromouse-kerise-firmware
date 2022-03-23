@@ -71,7 +71,7 @@ class Buzzer {
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
     // Player Task
     xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "Buzzer", /* stack */ 4096, this, /* priority */ 1, NULL);
+                "Buzzer", /* stack */ 4096, this, TASK_PRIORITY_BUZZER, NULL);
     // Ending
     initialized = true;
     return true;

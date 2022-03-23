@@ -16,16 +16,15 @@ namespace hardware {
 
 class Reflector {
  public:
-  static constexpr UBaseType_t Priority = 20;
-  static constexpr int CH_SIZE = 4;
+  static constexpr int NUM_CHANNELS = 4;
   static constexpr int ave_num = 1;
 
  public:
-  Reflector(const std::array<gpio_num_t, CH_SIZE>& tx_pins,
-            const std::array<adc1_channel_t, CH_SIZE>& rx_channels)
+  Reflector(const std::array<gpio_num_t, NUM_CHANNELS>& tx_pins,
+            const std::array<adc1_channel_t, NUM_CHANNELS>& rx_channels)
       : tx_pins(tx_pins), rx_channels(rx_channels) {}
   bool init() {
-    for (int i = 0; i < CH_SIZE; i++) {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
       value[i] = 0;
       // tx
       ESP_ERROR_CHECK(gpio_reset_pin(tx_pins[i]));
@@ -39,7 +38,7 @@ class Reflector {
     ts.periodic(200);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-        "Reflector", 2048, this, Priority, NULL, APP_CPU_NUM);
+        "Reflector", 2048, this, TASK_PRIORITY_REFLECTOR, NULL, APP_CPU_NUM);
     return true;
   }
   int16_t side(uint8_t isRight) const { return read(isRight ? 1 : 0); }
@@ -47,7 +46,7 @@ class Reflector {
   int16_t read(const int8_t ch) const { return value[ch]; }
   void csv() const {
     std::cout << "0,2000,4000,";
-    for (int8_t i = 0; i < CH_SIZE; i++)
+    for (int8_t i = 0; i < NUM_CHANNELS; i++)
       std::cout << "," << read(i);
     std::cout << std::endl;
   }
@@ -56,12 +55,12 @@ class Reflector {
   }
 
  private:
-  const std::array<gpio_num_t, CH_SIZE> tx_pins;  //< 赤外線LEDのピン
-  const std::array<adc1_channel_t, CH_SIZE>
+  const std::array<gpio_num_t, NUM_CHANNELS> tx_pins;  //< 赤外線LEDのピン
+  const std::array<adc1_channel_t, NUM_CHANNELS>
       rx_channels;  //< フォトトランジスタのADC1_CHANNEL
-  std::array<int16_t, CH_SIZE> value;  //< リフレクタの測定値
-  TimerSemaphore ts;                   //< インターバル用タイマー
-  ctrl::Accumulator<int, ave_num> buffer[CH_SIZE];  //< 平均計算用
+  std::array<int16_t, NUM_CHANNELS> value;  //< リフレクタの測定値
+  TimerSemaphore ts;  //< インターバル用タイマー
+  ctrl::Accumulator<int, ave_num> buffer[NUM_CHANNELS];  //< 平均計算用
 
   void update() {
     ts.take();  //< スタートを同期

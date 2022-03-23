@@ -31,17 +31,19 @@ static char app_log_buffer[APP_LOG_BUFFER_SIZE];
 #define APP_LOG_BASE(l, c, f, ...)                                          \
   do {                                                                      \
     const int t = esp_timer_get_time();                                     \
+    if (app_log_buffer_ptr > APP_LOG_BUFFER_SIZE - 64)                      \
+      app_log_buffer_ptr = 0;                                               \
     app_log_buffer_ptr +=                                                   \
         std::snprintf(app_log_buffer + app_log_buffer_ptr,                  \
                       APP_LOG_BUFFER_SIZE - app_log_buffer_ptr,             \
                       c "[" l "][%d.%06d][" __FILE__                        \
                         ":" APP_TOSTRING(__LINE__) "][%s]\x1b[0m\t" f "\n", \
                       t / 1000000, t % 1000000, __func__, ##__VA_ARGS__);   \
-    app_log_buffer_ptr %= APP_LOG_BUFFER_SIZE;                              \
   } while (0)
-#define APP_LOG_DUMP()                 \
-  do {                                 \
-    std::printf("%s", app_log_buffer); \
+#define APP_LOG_DUMP()                                      \
+  do {                                                      \
+    std::printf("%s", app_log_buffer + app_log_buffer_ptr); \
+    std::printf("%s", app_log_buffer);                      \
   } while (0)
 #else
 #define APP_LOG_BASE(l, c, f, ...)                                 \

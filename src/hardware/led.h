@@ -24,7 +24,7 @@ class LED {
     this->i2c_port = i2c_port;
     writeReg(0x00, 0b10000001);
     xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "LED", 2048, this, 1, NULL);
+                "LED", 2048, this, TASK_PRIORITY_LED, NULL);
     return true;
   }
   uint8_t set(uint8_t new_value) {

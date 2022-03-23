@@ -32,7 +32,7 @@ class ToF {
     vl6180x->writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 32);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "ToF",
-        4096, this, 1, NULL, PRO_CPU_NUM);
+        4096, this, TASK_PRIORITY_TOF, NULL, PRO_CPU_NUM);
     vTaskDelay(pdMS_TO_TICKS(40));
     if (vl6180x->last_status != 0) {
       ESP_LOGE(TAG, "ToF init failed :(");

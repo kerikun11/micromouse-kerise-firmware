@@ -23,8 +23,9 @@ class LED {
   bool init(i2c_port_t i2c_port) {
     this->i2c_port = i2c_port;
     writeReg(0x00, 0b10000001);
-    xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "LED", 2048, this, TASK_PRIORITY_LED, NULL);
+    xTaskCreatePinnedToCore(
+        [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "LED",
+        2048, this, TASK_PRIORITY_LED, NULL, TASK_CORE_ID_LED);
     return true;
   }
   uint8_t set(uint8_t new_value) {
@@ -43,6 +44,7 @@ class LED {
 
   void task() {
     while (1) {
+      uint8_t value;
       if (xQueueReceive(playList, &value, portMAX_DELAY) == pdTRUE)
         writeValue(value);
     }

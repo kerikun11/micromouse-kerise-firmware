@@ -38,7 +38,8 @@ class Reflector {
     ts.periodic(200);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-        "Reflector", 2048, this, TASK_PRIORITY_REFLECTOR, NULL, APP_CPU_NUM);
+        "Reflector", 2048, this, TASK_PRIORITY_REFLECTOR, NULL,
+        TASK_CORE_ID_REFLECTOR);
     return true;
   }
   int16_t side(uint8_t isRight) const { return read(isRight ? 1 : 0); }

@@ -153,8 +153,10 @@ class MoveAction {
     /* デフォルトは既知区間斜めを無効化 */
     rp_search.diag_enabled = false;
     /* start */
-    xTaskCreate([](void* arg) { static_cast<decltype(this)>(arg)->task(); },
-                "MoveAction", 8192, this, TASK_PRIORITY_MOVE_ACTION, NULL);
+    xTaskCreatePinnedToCore(
+        [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
+        "MoveAction", 8192, this, TASK_PRIORITY_MOVE_ACTION, NULL,
+        TASK_CORE_ID_MOVE_ACTION);
   }
   void enable(const TaskAction ta) {
     MA_LOGI("%s", getTaskActionName(ta));

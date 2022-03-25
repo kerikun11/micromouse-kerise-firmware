@@ -80,7 +80,7 @@ class WallDetector {
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
         "WallDetector", 4096, this, TASK_PRIORITY_WALL_DETECTOR, NULL,
-        PRO_CPU_NUM);
+        TASK_CORE_ID_WALL_DETECTOR);
     return true;
   }
   bool backup(const char* filepath = WALL_DETECTOR_BACKUP_PATH) {

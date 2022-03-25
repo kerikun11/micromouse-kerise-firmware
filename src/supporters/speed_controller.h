@@ -45,7 +45,7 @@ class SpeedController {
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
         "SpeedCtrl", 4096, this, TASK_PRIORITY_SPEED_CONTROLLER, NULL,
-        PRO_CPU_NUM);
+        TASK_CORE_ID_SPEED_CONTROLLER);
     return true;
   }
   void reset() {
@@ -98,7 +98,7 @@ class SpeedController {
   }
 
  private:
-  volatile bool drive_enabled = false;
+  bool drive_enabled = false;
   freertospp::Semaphore data_ready_semaphore;
   std::mutex mutex;
 
@@ -118,9 +118,11 @@ class SpeedController {
       /* PID control */
       if (drive_enabled)
         drive();
-      /* ToDo: logging here */
+      /* logging */
+      logging();
     }
   }
+  void logging() {}
   void update_samples() {
     /* add new samples */
     for (int i = 0; i < 2; i++)

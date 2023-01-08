@@ -272,9 +272,9 @@ class MazeRobot : public RobotBase {
   }
   void calcNextDirectionsPreCallback() override {
     /* ゴール判定用フラグ */
-    prevIsForceGoingToGoal = isForceGoingToGoal;
+    prevIsForceGoingToGoal = calcData.isForceGoingToGoal;
     /* ウルトラマンタイマー */
-    if (!isForceBackToStart && state.no_more_time()) {
+    if (!calcData.isForceBackToStart && state.no_more_time()) {
       setForceBackToStart();
       hw->bz->play(hardware::Buzzer::TIMEOUT);
       MR_LOGI("timoout");
@@ -289,10 +289,10 @@ class MazeRobot : public RobotBase {
     /* 未知区間加速の設定 */
     ma->set_unknown_accel_flag(getUnknownAccelFlag());
     /* ゴール判定 */
-    if (prevIsForceGoingToGoal && !isForceGoingToGoal) {
+    if (prevIsForceGoingToGoal && !calcData.isForceGoingToGoal) {
       hw->bz->play(hardware::Buzzer::CONFIRM);
     }
-    if (!isForceGoingToGoal)
+    if (!calcData.isForceGoingToGoal)
       state.set_reached_goal();
     /* 探索情報のお知らせ */
     if (newState == oldState)
@@ -303,7 +303,7 @@ class MazeRobot : public RobotBase {
         newState != SearchAlgorithm::IMPOSSIBLE)
       hw->bz->play(hardware::Buzzer::COMPLETE);  //< 自己位置同定完了
     if (oldState == SearchAlgorithm::SEARCHING_ADDITIONALLY &&
-        newState != SearchAlgorithm::IMPOSSIBLE && !isForceBackToStart)
+        newState != SearchAlgorithm::IMPOSSIBLE && !calcData.isForceBackToStart)
       hw->bz->play(hardware::Buzzer::COMPLETE);  //< 追加探索完了
   }
   /* end of override virtual functions */

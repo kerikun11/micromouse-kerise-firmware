@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <peripheral/mcpwm_kerise.h>
+#include <driver/mcpwm.h>
 #include <algorithm>  //< std::max(), std::min()
 #include <cmath>      //< std::isfinit()
 #include <iostream>
@@ -23,6 +23,7 @@ class OneMotor {
            gpio_num_t gpio_num_1,
            gpio_num_t gpio_num_2)
       : unit(unit), timer(timer) {
+    ESP_ERROR_CHECK(mcpwm_group_set_resolution(unit, 160'000'000L));
     ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals_1, gpio_num_1));
     ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals_2, gpio_num_2));
     mcpwm_config_t pwm_config = {

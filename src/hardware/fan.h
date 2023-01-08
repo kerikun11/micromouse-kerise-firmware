@@ -7,7 +7,8 @@
  */
 #pragma once
 
-#include "peripheral/mcpwm_kerise.h"
+#include <driver/mcpwm.h>
+#include <algorithm>  //< for std::min std::max
 
 namespace hardware {
 

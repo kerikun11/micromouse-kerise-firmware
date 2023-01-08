@@ -7,12 +7,18 @@
  */
 #pragma once
 
-/* Log */
+/* Log Target */
+#define APP_LOG_MEM_MODE 1
+
+/* Log Level */
 #define APP_LOG_LEVEL 4
 #define MR_LOG_LEVEL 4
 #define MA_LOG_LEVEL 4
+#if APP_LOG_LEVEL > 2
+#warning "APP_LOGD Enabled"
+#endif
 
-/* Task */
+/* Task Priority */
 #define TASK_PRIORITY_REFLECTOR 20
 #define TASK_PRIORITY_ENCODER 7
 #define TASK_PRIORITY_IMU 6

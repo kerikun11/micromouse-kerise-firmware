@@ -8,6 +8,7 @@
 #pragma once
 
 #include <esp_spiffs.h>
+#include <locale.h>
 #include <sys/dirent.h>
 #include <sys/stat.h>
 
@@ -68,7 +69,8 @@ class SPIFFS {
               __FILE__, __LINE__);
       return;
     }
-    printf("SPIFFS total: %d, used: %d, free: %d\n", total, used, total - used);
+    printf("SPIFFS total: %d used: %d free: %d %.3f%%\n", total, used,
+           total - used, double(total - used) / total * 100);
     /* show SPIFFS file list */
     printf("SPIFFS file list:\n");
     peripheral::SPIFFS::list_dir("/spiffs");

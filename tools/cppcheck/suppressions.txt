@@ -1,0 +1,10 @@
+# global
+missingInclude
+unusedFunction
+unusedPrivateFunction
+ctuOneDefinitionRuleViolation
+noExplicitConstructor
+
+# specific
+useStlAlgorithm:lib/maze/examples/*
+useStlAlgorithm:lib/maze/test/*

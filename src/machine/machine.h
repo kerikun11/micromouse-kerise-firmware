@@ -55,7 +55,7 @@ class Machine {
         mr->print();
         break;
       case 11: /* プチコン */
-        Machine::petitcon();
+        Machine::petit_con();
         break;
       case 12: /* タイヤ径の測定 */
         Machine::wheel_diameter_measurement();
@@ -131,6 +131,7 @@ class Machine {
     if (value > 7)
       value -= 16;
     for (auto& vs : ma->rp_fast.v_slalom)
+      // cppcheck-suppress useStlAlgorithm
       vs *= std::pow(ma->rp_fast.vs_factor, float(value));
     /* 最大速度 */
     for (int i = 0; i < 2; i++)
@@ -353,7 +354,7 @@ class Machine {
     }
     hw->bz->play(hardware::Buzzer::SUCCESSFUL);
   }
-  void petitcon() {
+  void petit_con() {
     if (!sp->ui->waitForCover())
       return;
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -656,7 +657,7 @@ class Machine {
     ctrl::TrajectoryTracker tt(model::TrajectoryTrackerGain);
     ctrl::Pose offset;
     /* fan */
-    if (fan_duty > 0) {
+    if (fan_duty > 0) {  // cppcheck-suppress knownConditionTrueFalse
       hw->fan->drive(fan_duty);
       vTaskDelay(pdMS_TO_TICKS(400));
     }
@@ -820,15 +821,6 @@ class Machine {
           hw->tof->passedTimeMs(), hw->tof->getRangeRaw());
     }
   }
-  void show_info() {
-    rtc_cpu_freq_config_t conf;
-    rtc_clk_cpu_freq_get_config(&conf);
-    /* show info */
-    APP_LOGI("I'm KERISE v%d.", KERISE_SELECT);
-    APP_LOGI("IDF version:  %s", esp_get_idf_version());
-    APP_LOGI("CPU Freq:     %lu [MHz]", conf.freq_mhz);
-    peripheral::SPIFFS::show_info();
-  }
   bool check_chip() {
     auto mac = peripheral::ESP::get_mac();
     if (mac != model::MAC_ID) {
@@ -846,7 +838,8 @@ class Machine {
     /* System */
     peripheral::SPIFFS::init() || (result = false);
     /* show info */
-    show_info();
+    APP_LOGI("I'm KERISE v%d.", KERISE_SELECT);
+    peripheral::SPIFFS::show_info();
     /* check chip */
     if (!check_chip()) {
       auto* bz = hardware::Buzzer::get_instance();
@@ -899,14 +892,14 @@ class Machine {
   freertospp::Task<Machine> task_print;
 
   /* Hardware */
-  hardware::Hardware* hw;
+  hardware::Hardware* hw = nullptr;
   /* Supporter */
-  supporters::Supporters* sp;
+  supporters::Supporters* sp = nullptr;
   /* Agents */
-  MoveAction* ma;
-  MazeRobot* mr;
+  MoveAction* ma = nullptr;
+  MazeRobot* mr = nullptr;
   /* Logger */
-  Logger* lgr;
+  Logger* lgr = nullptr;
 };
 
 }  // namespace machine

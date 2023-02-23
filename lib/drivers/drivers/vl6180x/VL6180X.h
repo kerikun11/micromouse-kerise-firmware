@@ -88,7 +88,7 @@ class VL6180X
       INTERLEAVED_MODE__ENABLE              = 0x2A3,
     };
 
-    uint8_t last_status; // status of last I2C transmission
+    uint8_t last_status = 0; // status of last I2C transmission
 
     VL6180X(i2c_port_t i2c_port);
 

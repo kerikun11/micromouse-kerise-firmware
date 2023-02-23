@@ -3,21 +3,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <hardware/hardware.h>
+#include <peripheral/esp.h>
 #include <peripheral/spiffs.h>
-#include <soc/rtc.h>  //< for rtc_clk_cpu_freq_get_config
 #include <string.h>
 #include <sstream>
 
-int get_cpu_freq_in_mhz() {
-  rtc_cpu_freq_config_t conf;
-  rtc_clk_cpu_freq_get_config(&conf);
-  return conf.freq_mhz;
-}
-
 void devkit_main() {
-  vTaskDelay(pdMS_TO_TICKS(3000));
   APP_LOGI("This is ESP32 DevKit");
-  APP_LOGI("CPU Freq: %d MHz", get_cpu_freq_in_mhz());
+  APP_LOGI("CPU Freq: %d MHz", peripheral::ESP::get_cpu_freq_in_mhz());
 
 #if 0
   /* show SPIFFS info */

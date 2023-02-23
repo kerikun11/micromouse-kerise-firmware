@@ -19,20 +19,22 @@ class AS5048A_DUAL {
   AS5048A_DUAL() {}
   bool init(const spi_host_device_t spi_host, const int8_t pin_cs) {
     // ESP-IDF SPI device initialization
-    static spi_device_interface_config_t dev_cfg;
-    dev_cfg.command_bits = 1;
-    dev_cfg.address_bits = 0;
-    dev_cfg.dummy_bits = 0;
-    dev_cfg.mode = 1;
-    dev_cfg.duty_cycle_pos = 0;
-    dev_cfg.cs_ena_pretrans = 0;
-    dev_cfg.cs_ena_posttrans = 0;
-    dev_cfg.clock_speed_hz = 5'000'000;
-    dev_cfg.spics_io_num = pin_cs;
-    dev_cfg.flags = 0;
-    dev_cfg.queue_size = 1;
-    dev_cfg.pre_cb = NULL;
-    dev_cfg.post_cb = NULL;
+    static spi_device_interface_config_t dev_cfg = {
+        .command_bits = 1,
+        .address_bits = 0,
+        .dummy_bits = 0,
+        .mode = 1,
+        .duty_cycle_pos = 0,
+        .cs_ena_pretrans = 0,
+        .cs_ena_posttrans = 0,
+        .clock_speed_hz = 5'000'000,
+        .input_delay_ns = 0,
+        .spics_io_num = pin_cs,
+        .flags = 0,
+        .queue_size = 1,
+        .pre_cb = NULL,
+        .post_cb = NULL,
+    };
     ESP_ERROR_CHECK(spi_bus_add_device(spi_host, &dev_cfg, &encoder_spi));
     return update();
   }

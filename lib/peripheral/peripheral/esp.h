@@ -7,7 +7,8 @@
  */
 #pragma once
 
-#include <esp_mac.h>
+#include <esp_mac.h>  //< esp_efuse_mac_get_default
+#include <soc/rtc.h>  //< for rtc_clk_cpu_freq_get_config
 
 namespace peripheral {
 
@@ -17,6 +18,11 @@ class ESP {
     uint64_t mac = 0;
     esp_efuse_mac_get_default((uint8_t*)&mac);
     return mac;
+  }
+  static int get_cpu_freq_in_mhz() {
+    rtc_cpu_freq_config_t conf;
+    rtc_clk_cpu_freq_get_config(&conf);
+    return conf.freq_mhz;
   }
 };
 

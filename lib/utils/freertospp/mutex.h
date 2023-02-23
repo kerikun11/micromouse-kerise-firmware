@@ -28,7 +28,7 @@ class Mutex {
     return pdTRUE == xSemaphoreGiveFromISR(xSemaphore, NULL);
   }
   bool give() { return pdTRUE == xSemaphoreGive(xSemaphore); }
-  bool take(portTickType xBlockTime = portMAX_DELAY) {
+  bool take(TickType_t xBlockTime = portMAX_DELAY) {
     return pdTRUE == xSemaphoreTake(xSemaphore, xBlockTime);
   }
 

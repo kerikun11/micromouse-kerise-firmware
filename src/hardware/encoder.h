@@ -63,7 +63,7 @@ class Encoder {
   void csv() {
     std::printf("%d,%d\n", -pulses[0], pulses[1]);  //
   }
-  void sampling_sync(portTickType xBlockTime = portMAX_DELAY) const {
+  void sampling_sync(TickType_t xBlockTime = portMAX_DELAY) const {
     sampling_end_semaphore.take(xBlockTime);
   }
 

@@ -9,17 +9,17 @@
 
 #include "model.h"
 
-#include <driver/adc.h>
 #include <driver/i2c.h>
 #include <driver/ledc.h>
 #include <driver/spi_master.h>
+#include <esp_adc/adc_oneshot.h>
 
 /* Hardware Mapping */
-#define BAT_VOL_ADC1_CHANNEL ADC1_CHANNEL_7
+#define BAT_VOL_ADC1_CHANNEL ADC_CHANNEL_7
 #define REFLECTOR_TX_PINS \
   { GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_14, GPIO_NUM_15 }
 #define REFLECTOR_RX_CHANNELS \
-  { ADC1_CHANNEL_0, ADC1_CHANNEL_1, ADC1_CHANNEL_2, ADC1_CHANNEL_3 }
+  { ADC_CHANNEL_0, ADC_CHANNEL_1, ADC_CHANNEL_2, ADC_CHANNEL_3 }
 #define BUTTON_PIN GPIO_NUM_0
 
 /* SPI Bus */

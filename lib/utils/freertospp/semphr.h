@@ -29,7 +29,7 @@ class Semaphore {
     return pdTRUE == xSemaphoreGiveFromISR(xSemaphore, NULL);
   }
   bool give() const { return pdTRUE == xSemaphoreGive(xSemaphore); }
-  bool take(portTickType xBlockTime = portMAX_DELAY) const {
+  bool take(TickType_t xBlockTime = portMAX_DELAY) const {
     return pdTRUE == xSemaphoreTake(xSemaphore, xBlockTime);
   }
 

@@ -2,6 +2,6 @@
 
 namespace peripheral {
 
-// esp_adc_cal_characteristics_t ADC::chars;
+adc_oneshot_unit_handle_t ADC::adc1_handle;
 
 };  // namespace peripheral

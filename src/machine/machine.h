@@ -7,6 +7,8 @@
  */
 #pragma once
 
+#include <soc/rtc.h>
+
 #include "agents/maze_robot.h"
 #include "freertospp/task.h"
 #include "peripheral/esp.h"
@@ -819,10 +821,12 @@ class Machine {
     }
   }
   void show_info() {
+    rtc_cpu_freq_config_t conf;
+    rtc_clk_cpu_freq_get_config(&conf);
     /* show info */
     APP_LOGI("I'm KERISE v%d.", KERISE_SELECT);
     APP_LOGI("IDF version:  %s", esp_get_idf_version());
-    APP_LOGI("CPU Freq:     %u [MHz]", ets_get_cpu_frequency());
+    APP_LOGI("CPU Freq:     %lu [MHz]", conf.freq_mhz);
     peripheral::SPIFFS::show_info();
   }
   bool check_chip() {

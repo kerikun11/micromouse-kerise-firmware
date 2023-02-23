@@ -7,6 +7,8 @@
  */
 #pragma once
 
+#include <string>
+
 #include <esp_spiffs.h>
 #include <locale.h>
 #include <sys/dirent.h>
@@ -48,13 +50,12 @@ class SPIFFS {
     if (!(dir = opendir(name)))
       return;
     while ((entry = readdir(dir)) != NULL) {
-      char path[256 + 1];
-      snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
+      std::string path = std::string(name) + "/" + entry->d_name;
       if (entry->d_type == DT_DIR) {
-        printf("          %s/\n", path);
-        list_dir(path);  // recursive call
+        printf("          %s/\n", path.c_str());
+        list_dir(path.c_str());  // recursive call
       } else {
-        stat(path, &buf);
+        stat(path.c_str(), &buf);
         printf("%9ld %s/%s\n", buf.st_size, name, entry->d_name);
       }
     }

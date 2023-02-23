@@ -21,7 +21,7 @@ class Reflector {
 
  public:
   Reflector(const std::array<gpio_num_t, NUM_CHANNELS>& tx_pins,
-            const std::array<adc1_channel_t, NUM_CHANNELS>& rx_channels)
+            const std::array<adc_channel_t, NUM_CHANNELS>& rx_channels)
       : tx_pins(tx_pins), rx_channels(rx_channels) {}
   bool init() {
     for (int i = 0; i < NUM_CHANNELS; i++) {
@@ -31,9 +31,10 @@ class Reflector {
       ESP_ERROR_CHECK(gpio_set_level(tx_pins[i], 0));
       ESP_ERROR_CHECK(gpio_set_direction(tx_pins[i], GPIO_MODE_OUTPUT));
       // rx
-      gpio_num_t pin;
-      ESP_ERROR_CHECK(adc1_pad_get_io_num(rx_channels[i], &pin));
-      ESP_ERROR_CHECK(gpio_reset_pin(pin));
+      int pin;
+      ESP_ERROR_CHECK(adc_oneshot_channel_to_io(peripheral::ADC::ADC_UNIT,
+                                                rx_channels[i], &pin));
+      ESP_ERROR_CHECK(gpio_reset_pin((gpio_num_t)pin));
     }
     ts.periodic(200);
     xTaskCreatePinnedToCore(
@@ -57,7 +58,7 @@ class Reflector {
 
  private:
   const std::array<gpio_num_t, NUM_CHANNELS> tx_pins;  //< 赤外線LEDのピン
-  const std::array<adc1_channel_t, NUM_CHANNELS>
+  const std::array<adc_channel_t, NUM_CHANNELS>
       rx_channels;  //< フォトトランジスタのADC1_CHANNEL
   std::array<int16_t, NUM_CHANNELS> value;  //< リフレクタの測定値
   TimerSemaphore ts;  //< インターバル用タイマー

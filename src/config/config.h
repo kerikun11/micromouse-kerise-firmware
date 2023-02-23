@@ -11,7 +11,7 @@
 #define APP_LOG_MEM_MODE 1
 
 /* Log Level */
-#define APP_LOG_LEVEL 4
+#define APP_LOG_LEVEL 2
 #define MR_LOG_LEVEL 4
 #define MA_LOG_LEVEL 4
 #if APP_LOG_LEVEL > 2

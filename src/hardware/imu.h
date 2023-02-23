@@ -50,7 +50,7 @@ class IMU {
     std::unique_lock<std::mutex> unique_lock(calib_mutex);
     calib_cv.wait(unique_lock, [&] { return !calib_req; });
   }
-  void sampling_sync(portTickType xBlockTime = portMAX_DELAY) const {
+  void sampling_sync(TickType_t xBlockTime = portMAX_DELAY) const {
     sampling_end_semaphore.take(xBlockTime);
   }
   void print() {

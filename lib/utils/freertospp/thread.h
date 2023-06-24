@@ -9,6 +9,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+
 #include <functional>
 
 namespace freertospp {
@@ -18,8 +19,7 @@ namespace freertospp {
  */
 class Thread {
  public:
-  Thread(std::function<void()> func,
-         const char* const pcName = "unknown",
+  Thread(std::function<void()> func, const char* const pcName = "unknown",
          unsigned short usStackDepth = 8192,
          unsigned portBASE_TYPE uxPriority = 0,
          const BaseType_t xCoreID = tskNO_AFFINITY)
@@ -34,8 +34,7 @@ class Thread {
     xSemaphoreTake(xSemaphore, xBlockTime);
   }
   void detach() {
-    if (pxCreatedTask == NULL)
-      return;
+    if (pxCreatedTask == NULL) return;
     vTaskDelete(pxCreatedTask);
     pxCreatedTask = NULL;
     xSemaphoreGive(xSemaphore);

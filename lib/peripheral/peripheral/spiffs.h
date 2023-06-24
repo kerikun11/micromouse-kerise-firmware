@@ -7,12 +7,12 @@
  */
 #pragma once
 
-#include <string>
-
 #include <esp_spiffs.h>
 #include <locale.h>
 #include <sys/dirent.h>
 #include <sys/stat.h>
+
+#include <string>
 
 namespace peripheral {
 
@@ -47,8 +47,7 @@ class SPIFFS {
     DIR* dir;
     struct dirent* entry;
     struct stat buf;
-    if (!(dir = opendir(name)))
-      return;
+    if (!(dir = opendir(name))) return;
     while ((entry = readdir(dir)) != NULL) {
       std::string path = std::string(name) + "/" + entry->d_name;
       if (entry->d_type == DT_DIR) {

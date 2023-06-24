@@ -7,12 +7,12 @@
  */
 #pragma once
 
-#include "hardware/hardware.h"
-
 #include <cmath>    //< std::log
 #include <fstream>  //< for std::ifstream, std::ofstream
 #include <iomanip>
 #include <iostream>
+
+#include "hardware/hardware.h"
 
 class WallDetector {
  public:
@@ -31,25 +31,21 @@ class WallDetector {
     float value[4] = {0, 0, 0, 0};
 
     WallValue& operator+=(const WallValue& wv) {
-      for (int i = 0; i < 4; ++i)
-        value[i] += wv.value[i];
+      for (int i = 0; i < 4; ++i) value[i] += wv.value[i];
       return *this;
     }
     WallValue& operator-=(const WallValue& wv) {
-      for (int i = 0; i < 4; ++i)
-        value[i] -= wv.value[i];
+      for (int i = 0; i < 4; ++i) value[i] -= wv.value[i];
       return *this;
     }
     WallValue operator-(const WallValue& wv) const {
       WallValue ret;
-      for (int i = 0; i < 4; ++i)
-        ret.value[i] = value[i] - wv.value[i];
+      for (int i = 0; i < 4; ++i) ret.value[i] = value[i] - wv.value[i];
       return ret;
     }
     WallValue operator/(const float div) const {
       WallValue ret;
-      for (int i = 0; i < 4; ++i)
-        ret.value[i] = value[i] / div;
+      for (int i = 0; i < 4; ++i) ret.value[i] = value[i] / div;
       return ret;
     }
   };
@@ -75,8 +71,7 @@ class WallDetector {
  public:
   WallDetector(hardware::Hardware* hw) : hw(hw) {}
   bool init() {
-    if (!restore())
-      return false;
+    if (!restore()) return false;
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); },
         "WallDetector", 4096, this, TASK_PRIORITY_WALL_DETECTOR, NULL,
@@ -115,12 +110,10 @@ class WallDetector {
     const int ave_count = 500;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for (int j = 0; j < ave_count; j++) {
-      for (int i = 0; i < 2; i++)
-        sum[i] += ref2dist(hw->rfl->side(i));
+      for (int i = 0; i < 2; i++) sum[i] += ref2dist(hw->rfl->side(i));
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
-    for (int i = 0; i < 2; i++)
-      wall_ref.side[i] = sum[i] / ave_count;
+    for (int i = 0; i < 2; i++) wall_ref.side[i] = sum[i] / ave_count;
     APP_LOGI("Wall Calibration Side: %10f %10f", (double)wall_ref.side[0],
              (double)wall_ref.side[1]);
     hw->tof->enable();
@@ -132,12 +125,10 @@ class WallDetector {
     const int ave_count = 500;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for (int j = 0; j < ave_count; j++) {
-      for (int i = 0; i < 2; i++)
-        sum[i] += ref2dist(hw->rfl->front(i));
+      for (int i = 0; i < 2; i++) sum[i] += ref2dist(hw->rfl->front(i));
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
-    for (int i = 0; i < 2; i++)
-      wall_ref.front[i] = sum[i] / ave_count;
+    for (int i = 0; i < 2; i++) wall_ref.front[i] = sum[i] / ave_count;
     APP_LOGI("Wall Calibration Front: %10f %10f", (double)wall_ref.front[0],
              (double)wall_ref.front[1]);
     hw->tof->enable();
@@ -157,8 +148,7 @@ class WallDetector {
   void print() { APP_LOGI("%s", get_info()); }
   void csv() {
     std::cout << "0";
-    for (int i = 0; i < 4; ++i)
-      std::cout << "," << distance.value[i];
+    for (int i = 0; i < 4; ++i) std::cout << "," << distance.value[i];
     std::cout << std::endl;
   }
 

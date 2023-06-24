@@ -24,8 +24,7 @@ class Logger {
   }
   void push(const std::vector<float>& data) { buf.push_back(data); }
   void print() const {
-    if (buf.empty())
-      return;
+    if (buf.empty()) return;
     /* header */
     std::printf("# KERISE v%d\n", KERISE_SELECT);
     /* labels */

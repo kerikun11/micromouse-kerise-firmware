@@ -8,14 +8,14 @@
 #pragma once
 
 #include <driver/mcpwm.h>
+
 #include <algorithm>  //< for std::min std::max
 
 namespace hardware {
 
 class Fan {
  public:
-  Fan(gpio_num_t gpio_num,
-      mcpwm_unit_t unit = MCPWM_UNIT_1,
+  Fan(gpio_num_t gpio_num, mcpwm_unit_t unit = MCPWM_UNIT_1,
       mcpwm_timer_t timer = MCPWM_TIMER_0,
       mcpwm_io_signals_t io_signals = MCPWM0A)
       : gpio_num(gpio_num), unit(unit), timer(timer) {

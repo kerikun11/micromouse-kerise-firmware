@@ -79,8 +79,7 @@ class Machine {
   }
   void driveAutomatically() {
     /* 回収待ち */
-    if (sp->ui->waitForPickup())
-      return;
+    if (sp->ui->waitForPickup()) return;
     /* 状態復元 */
     Machine::restore();
     /* 自己位置復帰 */
@@ -104,8 +103,7 @@ class Machine {
     }
     /* 走行オプション */
     int mode = sp->ui->waitForSelect(2);
-    if (mode < 0)
-      return;
+    if (mode < 0) return;
     bool isAutoParamSelect = true;
     switch (mode) {
       case 0: /*< デフォルト */
@@ -114,8 +112,7 @@ class Machine {
         isAutoParamSelect = false;
         break;
     }
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     hw->led->set(9);
     // vTaskDelay(pdMS_TO_TICKS(5000)); //< 動画用 delay
     mr->autoRun(isAutoParamSelect);
@@ -123,41 +120,31 @@ class Machine {
   void selectParamManually() {
     int value;
     /* ターン速度 */
-    for (int i = 0; i < 1; i++)
-      hw->bz->play(hardware::Buzzer::SHORT7);
+    for (int i = 0; i < 1; i++) hw->bz->play(hardware::Buzzer::SHORT7);
     value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
-    if (value > 7)
-      value -= 16;
+    if (value < 0) return;
+    if (value > 7) value -= 16;
     for (auto& vs : ma->rp_fast.v_slalom)
       // cppcheck-suppress useStlAlgorithm
       vs *= std::pow(ma->rp_fast.vs_factor, float(value));
     /* 最大速度 */
-    for (int i = 0; i < 2; i++)
-      hw->bz->play(hardware::Buzzer::SHORT7);
+    for (int i = 0; i < 2; i++) hw->bz->play(hardware::Buzzer::SHORT7);
     value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
-    if (value > 7)
-      value -= 16;
+    if (value < 0) return;
+    if (value > 7) value -= 16;
     ma->rp_fast.v_max *= std::pow(ma->rp_fast.vm_factor, float(value));
     /* 加速度 */
-    for (int i = 0; i < 3; i++)
-      hw->bz->play(hardware::Buzzer::SHORT7);
+    for (int i = 0; i < 3; i++) hw->bz->play(hardware::Buzzer::SHORT7);
     value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
-    if (value > 7)
-      value -= 16;
+    if (value < 0) return;
+    if (value > 7) value -= 16;
     ma->rp_fast.a_max *= std::pow(ma->rp_fast.vm_factor, float(value));
     /* 成功 */
     hw->bz->play(hardware::Buzzer::SUCCESSFUL);
   }
   void selectParamPreset() {
     int value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
+    if (value < 0) return;
     ma->rp_fast = MoveAction::RunParameter();
     if (value <= 7)
       ma->rp_fast.up(value);
@@ -167,11 +154,9 @@ class Machine {
   }
   void selectRunConfig() {
     int mode = sp->ui->waitForSelect(16);
-    if (mode < 0)
-      return;
+    if (mode < 0) return;
     int value = sp->ui->waitForSelect(4);
-    if (value < 0)
-      return;
+    if (value < 0) return;
     switch (mode) {
       case 0: /* 斜め走行 */
         ma->rp_search.diag_enabled = value & 0x01;
@@ -215,26 +200,22 @@ class Machine {
     hw->fan->drive(0);
     /* 設定値の取得 */
     int value = sp->ui->waitForSelect(11);
-    if (value < 0)
-      return;
+    if (value < 0) return;
     /* 吸引ファンの駆動テスト */
     const float fan_duty = 0.1f * value;
     hw->fan->drive(fan_duty);
     bool res = sp->ui->waitForCover();
     hw->fan->drive(0);
-    if (!res)
-      return;
+    if (!res) return;
     /* 設定の反映 */
     ma->rp_fast.fan_duty = fan_duty;
     hw->bz->play(hardware::Buzzer::SUCCESSFUL);
   }
   void selectBackupData() {
     int mode = sp->ui->waitForSelect(2);
-    if (mode < 0)
-      return;
+    if (mode < 0) return;
     /* wait for confirm */
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     /* apply */
     switch (mode) {
       case 0: /* restore */
@@ -251,26 +232,22 @@ class Machine {
     else
       hw->bz->play(hardware::Buzzer::MAZE_RESTORE);
     /* ゴールが封印されていないか一応確認 */
-    if (!mr->isSolvable())
-      hw->bz->play(hardware::Buzzer::ERROR);
+    if (!mr->isSolvable()) hw->bz->play(hardware::Buzzer::ERROR);
   }
   void reset() {
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     hw->bz->play(hardware::Buzzer::BOOT);
     mr->reset();
   }
   void partyStunt() {
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     hw->led->set(6);
     hw->bz->play(hardware::Buzzer::CALIBRATION);
     hw->imu->calibration();
     hw->led->set(9);
     sp->sc->enable();
     sp->sc->set_target(0, 0);
-    while (!hw->mt->is_emergency())
-      vTaskDelay(pdMS_TO_TICKS(1));
+    while (!hw->mt->is_emergency()) vTaskDelay(pdMS_TO_TICKS(1));
     hw->mt->drive(0, 0);
     vTaskDelay(pdMS_TO_TICKS(100));
     sp->sc->disable();
@@ -283,8 +260,7 @@ class Machine {
       /* 前壁補正データの保存 */
       case 0:
         hw->led->set(15);
-        if (!sp->ui->waitForCover())
-          return;
+        if (!sp->ui->waitForCover()) return;
         if (sp->wd->backup()) {
           hw->bz->play(hardware::Buzzer::SUCCESSFUL);
         } else {
@@ -294,8 +270,7 @@ class Machine {
       /* 横壁キャリブレーション */
       case 1:
         hw->led->set(9);
-        if (!sp->ui->waitForCover())
-          return;
+        if (!sp->ui->waitForCover()) return;
         vTaskDelay(pdMS_TO_TICKS(1000));
         hw->bz->play(hardware::Buzzer::CONFIRM);
         sp->wd->calibration_side();
@@ -304,8 +279,7 @@ class Machine {
       /* 前壁キャリブレーション */
       case 2:
         hw->led->set(6);
-        if (!sp->ui->waitForCover(true))
-          return;
+        if (!sp->ui->waitForCover(true)) return;
         vTaskDelay(pdMS_TO_TICKS(1000));
         hw->bz->play(hardware::Buzzer::CONFIRM);
         sp->wd->calibration_front();
@@ -314,11 +288,9 @@ class Machine {
     }
   }
   void setGoalPositions() {
-    for (int i = 0; i < 2; i++)
-      hw->bz->play(hardware::Buzzer::SHORT7);
+    for (int i = 0; i < 2; i++) hw->bz->play(hardware::Buzzer::SHORT7);
     int value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
+    if (value < 0) return;
     switch (value) {
       case 0: {  //< マニュアル選択
         int x = sp->ui->waitForSelect(16);
@@ -355,17 +327,14 @@ class Machine {
     hw->bz->play(hardware::Buzzer::SUCCESSFUL);
   }
   void petit_con() {
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     std::string path;
     path += "s";
     for (int j = 0; j < 4; ++j) {
-      for (int i = 0; i < 28; ++i)
-        path += "s";
+      for (int i = 0; i < 28; ++i) path += "s";
       path += "r";
-      for (int i = 0; i < 12; ++i)
-        path += "s";
+      for (int i = 0; i < 12; ++i) path += "s";
       path += "r";
     }
     path += "s";
@@ -464,10 +433,8 @@ class Machine {
   void sysid() {
     int dir = sp->ui->waitForSelect(2);
     int gain = sp->ui->waitForSelect();
-    if (gain < 0)
-      return;
-    if (!sp->ui->waitForCover())
-      return;
+    if (gain < 0) return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(1000));
     lgr->init({
         "enc[0]",
@@ -508,13 +475,11 @@ class Machine {
   }
   void wheel_diameter_measurement() {
     int cells = sp->ui->waitForSelect(16);
-    if (cells < 0)
-      return;
+    if (cells < 0) return;
     cells = (cells == 0) ? 8 : cells;  //< default is 8 cells straight
     while (1) {
       /* wait for start */
-      if (!sp->ui->waitForCover())
-        return;
+      if (!sp->ui->waitForCover()) return;
       vTaskDelay(pdMS_TO_TICKS(500));
       /* calibration */
       hw->bz->play(hardware::Buzzer::CALIBRATION);
@@ -531,8 +496,7 @@ class Machine {
       for (float t = 0; !hw->mt->is_emergency(); t += 1e-3f) {
         sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
         sp->sc->sampling_sync();
-        if (sp->sc->est_p.x > dist)
-          break;
+        if (sp->sc->est_p.x > dist) break;
       }
       /* stop statically */
       sp->sc->set_target(0, 0);
@@ -542,16 +506,13 @@ class Machine {
         hw->mt->emergency_release(), hw->bz->play(hardware::Buzzer::EMERGENCY);
       hw->bz->play(hardware::Buzzer::CANCEL);
       /* wait for next */
-      if (sp->ui->waitForSelect(1) < 0)
-        return;
+      if (sp->ui->waitForSelect(1) < 0) return;
     }
   }
   void wall_test() {
     int cells = sp->ui->waitForSelect(16);
-    if (cells < 0)
-      return;
-    if (!sp->ui->waitForCover())
-      return;
+    if (cells < 0) return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     /* config */
     const float j_max = 240'000;
@@ -572,8 +533,7 @@ class Machine {
       sp->sc->sampling_sync();
       // if ((int)(t * 1000) % 2 == 0)
       log_push(log_select, ctrl::Pose(ad.x(t)), sp->sc->est_p);
-      if (hw->mt->is_emergency())
-        break;
+      if (hw->mt->is_emergency()) break;
     }
     /* end */
     sp->sc->disable();
@@ -583,13 +543,10 @@ class Machine {
   }
   void accel_test() {
     int cells = sp->ui->waitForSelect(2);
-    if (cells < 0)
-      return;
+    if (cells < 0) return;
     int dir = sp->ui->waitForSelect(2);
-    if (dir < 0)
-      return;
-    if (!sp->ui->waitForCover())
-      return;
+    if (dir < 0) return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     enum LOG_SELECT log_select = LOG_PID;
     log_init(log_select);
@@ -623,8 +580,7 @@ class Machine {
         log_push(log_select,
                  dir == 0 ? ctrl::Pose(ad.x(t)) : ctrl::Pose(0, 0, ad.x(t)),
                  sp->sc->est_p);
-      if (hw->mt->is_emergency())
-        break;
+      if (hw->mt->is_emergency()) break;
     }
     sp->sc->disable();
     if (hw->mt->is_emergency())
@@ -633,10 +589,8 @@ class Machine {
   }
   void slalom_test() {
     int mode = sp->ui->waitForSelect(2);
-    if (mode < 0)
-      return;
-    if (!sp->ui->waitForCover())
-      return;
+    if (mode < 0) return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     enum LOG_SELECT log_select = LOG_PID;
     log_init(log_select);
@@ -719,8 +673,7 @@ class Machine {
   void position_recovery() {
     while (1) {
       hw->led->set(15);
-      if (!sp->ui->waitForCover(true))
-        return;
+      if (!sp->ui->waitForCover(true)) return;
       hw->led->set(0);
       vTaskDelay(pdMS_TO_TICKS(500));
       ma->enable(MoveAction::TaskActionPositionRecovery);
@@ -731,10 +684,8 @@ class Machine {
   }
   void motor_test() {
     int value = sp->ui->waitForSelect(16);
-    if (value < 0)
-      return;
-    if (!sp->ui->waitForCover(true))
-      return;
+    if (value < 0) return;
+    if (!sp->ui->waitForCover(true)) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     float duty = (value < 8 ? value : value - 16) * 0.1f;
     hw->mt->drive(duty, duty);
@@ -745,8 +696,7 @@ class Machine {
   void encoder_test() {
     int value = sp->ui->waitForSelect(16);
     hw->led->set(15);
-    if (!sp->ui->waitForCover())
-      return;
+    if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
     float pwm = 0.05f * value;
     hw->mt->drive(pwm, pwm);
@@ -756,8 +706,7 @@ class Machine {
   void front_wall_attach_test() {
     while (1) {
       /* 開始待ち */
-      if (!sp->ui->waitForCover(true))
-        return;
+      if (!sp->ui->waitForCover(true)) return;
       vTaskDelay(pdMS_TO_TICKS(500));
       sp->sc->enable();
       /* wall_attach start */
@@ -870,8 +819,7 @@ class Machine {
   }
   void drive() {
     // driveAutomatically();
-    while (1)
-      driveManually();
+    while (1) driveManually();
     vTaskDelay(portMAX_DELAY);
   }
   void print() {

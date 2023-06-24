@@ -7,14 +7,14 @@
  */
 #pragma once
 
-#include "config/wheel_parameter.h"
-#include "hardware/hardware.h"
-
 #include <ctrl/accumulator.h>
 #include <ctrl/feedback_controller.h>
 #include <ctrl/polar.h>
 #include <ctrl/pose.h>
 #include <freertospp/semphr.h>
+
+#include "config/wheel_parameter.h"
+#include "hardware/hardware.h"
 
 class SpeedController {
  public:
@@ -77,8 +77,7 @@ class SpeedController {
   void set_target(float v_tra, float v_rot, float a_tra = 0, float a_rot = 0) {
     std::lock_guard<std::mutex> lock_guard(mutex);
     ref_v.tra = v_tra, ref_v.rot = v_rot, ref_a.tra = a_tra, ref_a.rot = a_rot;
-    if (drive_enabled)
-      drive();
+    if (drive_enabled) drive();
   }
   void fix_pose(ctrl::Pose fix, bool force = true) {
     std::lock_guard<std::mutex> lock_guard(mutex);
@@ -116,8 +115,7 @@ class SpeedController {
       /* notify app */
       data_ready_semaphore.give();
       /* PID control */
-      if (drive_enabled)
-        drive();
+      if (drive_enabled) drive();
       /* logging */
       logging();
     }

@@ -44,9 +44,7 @@ class TimerSemaphore {
   portBASE_TYPE giveFromISR() {
     return xSemaphoreGiveFromISR(xSemaphore, NULL);
   }
-  void attach(uint32_t microseconds,
-              bool repeat,
-              esp_timer_cb_t callback,
+  void attach(uint32_t microseconds, bool repeat, esp_timer_cb_t callback,
               void* arg) {
     detach();
     esp_timer_create_args_t esp_timer_create_args;

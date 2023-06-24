@@ -64,8 +64,7 @@ class Task {
    * @brief タスクを終了し，削除する関数
    */
   void terminate() {
-    if (pxCreatedTask == NULL)
-      return;
+    if (pxCreatedTask == NULL) return;
     vTaskDelete(pxCreatedTask);
     pxCreatedTask = NULL;
   }

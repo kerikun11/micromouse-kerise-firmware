@@ -7,15 +7,15 @@
  */
 #pragma once
 
-#include "app_log.h"
-#include "config/model.h"  //< for KERISE_SELECT
-
 #include <drivers/icm20602/icm20602.h>
 #include <freertospp/semphr.h>
 
 #include <array>
 #include <condition_variable>
 #include <mutex>
+
+#include "app_log.h"
+#include "config/model.h"  //< for KERISE_SELECT
 
 namespace hardware {
 
@@ -133,8 +133,7 @@ class IMU {
     }
   }
   void update() {
-    for (size_t i = 0; i < IMU_NUM; i++)
-      icm[i].update();
+    for (size_t i = 0; i < IMU_NUM; i++) icm[i].update();
 
     std::lock_guard<std::mutex> lock_guard(mutex);
 #if KERISE_SELECT == 4 || KERISE_SELECT == 3

@@ -10,6 +10,7 @@
 #include <ctrl/accumulator.h>
 #include <peripheral/adc.h>
 #include <peripheral/timer_semaphore.h>
+
 #include <array>
 
 namespace hardware {
@@ -48,8 +49,7 @@ class Reflector {
   int16_t read(const int8_t ch) const { return value[ch]; }
   void csv() const {
     std::cout << "0,2000,4000,";
-    for (int8_t i = 0; i < NUM_CHANNELS; i++)
-      std::cout << "," << read(i);
+    for (int8_t i = 0; i < NUM_CHANNELS; i++) std::cout << "," << read(i);
     std::cout << std::endl;
   }
   void print() const {
@@ -75,9 +75,8 @@ class Reflector {
       gpio_set_level(tx_pins[i], 0);                           //< 充電開始
       // Calculation
       int diff = raw - offset;  //< オフセットとの差をとる
-      if (diff < 1)
-        diff = 1;            //< 0以下にならないように1で飽和
-      buffer[i].push(diff);  //< 保存
+      if (diff < 1) diff = 1;   //< 0以下にならないように1で飽和
+      buffer[i].push(diff);     //< 保存
       value[i] = buffer[i].average();
     }
   }

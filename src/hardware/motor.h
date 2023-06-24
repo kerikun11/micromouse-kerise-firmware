@@ -8,6 +8,7 @@
 #pragma once
 
 #include <driver/mcpwm.h>
+
 #include <algorithm>  //< std::max(), std::min()
 #include <cmath>      //< std::isfinit()
 #include <iostream>
@@ -16,12 +17,9 @@ namespace hardware {
 
 class OneMotor {
  public:
-  OneMotor(mcpwm_unit_t unit,
-           mcpwm_timer_t timer,
-           mcpwm_io_signals_t io_signals_1,
-           mcpwm_io_signals_t io_signals_2,
-           gpio_num_t gpio_num_1,
-           gpio_num_t gpio_num_2)
+  OneMotor(mcpwm_unit_t unit, mcpwm_timer_t timer,
+           mcpwm_io_signals_t io_signals_1, mcpwm_io_signals_t io_signals_2,
+           gpio_num_t gpio_num_1, gpio_num_t gpio_num_2)
       : unit(unit), timer(timer) {
     ESP_ERROR_CHECK(mcpwm_group_set_resolution(unit, 160'000'000L));
     ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals_1, gpio_num_1));
@@ -70,17 +68,14 @@ class Motor {
   static constexpr float emergency_threshold = 1.3f;
 
  public:
-  Motor(gpio_num_t gpio_L1,
-        gpio_num_t gpio_L2,
-        gpio_num_t gpio_R1,
+  Motor(gpio_num_t gpio_L1, gpio_num_t gpio_L2, gpio_num_t gpio_R1,
         gpio_num_t gpio_R2)
       : mt_L(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, MCPWM0B, gpio_L1, gpio_L2),
         mt_R(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM1A, MCPWM1B, gpio_R1, gpio_R2) {
     free();
   }
   void drive(float valueL, float valueR) {
-    if (emergency)
-      return;
+    if (emergency) return;
     mt_L.drive(valueL);
     mt_R.drive(valueR);
     if (std::abs(valueL) > emergency_threshold ||

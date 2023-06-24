@@ -11,6 +11,7 @@
 #include <drivers/vl6180x/VL6180X.h>
 #include <esp_log.h>
 #include <peripheral/i2c.h>
+
 #include <cstdio>
 
 namespace hardware {
@@ -83,8 +84,7 @@ class ToF {
                 0x04) == 0) {
           vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
           passed_ms++;
-          if (millis() - startAt > 100)
-            break;
+          if (millis() - startAt > 100) break;
         }
         dur = millis() - startAt;
       }
@@ -96,8 +96,7 @@ class ToF {
       /* 2 point: (x1, y1) = (r90, 90), (x2, y2) = (r180, 180) */
       distance = (180.0f - 90.0f) / (r180 - r90) * (range - r90) + 90;
       log.push(distance);
-      if (range != 255)
-        passed_ms = 0;
+      if (range != 255) passed_ms = 0;
     }
   }
 };

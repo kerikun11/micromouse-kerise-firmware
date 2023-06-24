@@ -1,12 +1,13 @@
-#include "app_log.h"
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <hardware/hardware.h>
 #include <peripheral/esp.h>
 #include <peripheral/spiffs.h>
 #include <string.h>
+
 #include <sstream>
+
+#include "app_log.h"
 
 void devkit_main() {
   APP_LOGI("This is ESP32 DevKit");

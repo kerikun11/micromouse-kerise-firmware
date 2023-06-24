@@ -7,13 +7,13 @@
  */
 #pragma once
 
+#include <MazeLib/RobotBase.h>
+#include <esp_timer.h>
+
 #include "agents/move_action.h"
 #include "config/model.h"
 #include "hardware/hardware.h"
 #include "supporters/supporters.h"
-
-#include <MazeLib/RobotBase.h>
-#include <esp_timer.h>
 
 using namespace MazeLib;
 
@@ -191,8 +191,7 @@ class MazeRobot : public RobotBase {
     MR_LOGD("");
     if (isPositionIdentificationAtFirst) {
       MR_LOGD("");
-      if (!auto_pi_run())
-        return false;  //< 回収された
+      if (!auto_pi_run()) return false;  //< 回収された
     }
     /* 探索走行: スタート -> ゴール -> スタート */
     MR_LOGD("");
@@ -210,15 +209,12 @@ class MazeRobot : public RobotBase {
       if (isAutoParamSelect && state.get_try_count_remain() <= 0) {
         hw->bz->play(hardware::Buzzer::COMPLETE);
         MR_LOGD("");
-        if (sp->ui->waitForPickup(2000))
-          return false;
+        if (sp->ui->waitForPickup(2000)) return false;
       }
       /* 回収待ち */
-      if (sp->ui->waitForPickup())
-        return false;
+      if (sp->ui->waitForPickup()) return false;
       /* 走行パラメータ選択 */
-      if (isAutoParamSelect)
-        auto_parameter_select();
+      if (isAutoParamSelect) auto_parameter_select();
       /* 最短走行 */
       MR_LOGD("");
       if (!auto_fast_run()) {
@@ -229,14 +225,12 @@ class MazeRobot : public RobotBase {
         ma->emergency_release();
         // state.save(), esp_restart(); //< 緊急ループ対策
         /* 自動復帰 */
-        if (!auto_pi_run())
-          return false;  //< 回収された
+        if (!auto_pi_run()) return false;  //< 回収された
       }
     }
   }
   void print() const {
-    for (const auto& wl : maze.getWallRecords())
-      std::cout << wl << std::endl;
+    for (const auto& wl : maze.getWallRecords()) std::cout << wl << std::endl;
     maze.print();
   }
   void setGoals(const Positions& goal) { replaceGoals(goal); }
@@ -251,8 +245,7 @@ class MazeRobot : public RobotBase {
   void waitForEndAction() override {
     // vTaskDelay(pdMS_TO_TICKS(300));  //< 計算処理に時間がかかる場合を模擬
     ma->waitForEndAction();
-    if (hw->mt->is_emergency())
-      setBreakFlag();
+    if (hw->mt->is_emergency()) setBreakFlag();
   }
   void queueAction(const RobotBase::SearchAction action) override {
     ma->enqueue_action(action);
@@ -292,11 +285,9 @@ class MazeRobot : public RobotBase {
     if (prevIsForceGoingToGoal && !calcData.isForceGoingToGoal) {
       hw->bz->play(hardware::Buzzer::CONFIRM);
     }
-    if (!calcData.isForceGoingToGoal)
-      state.set_reached_goal();
+    if (!calcData.isForceGoingToGoal) state.set_reached_goal();
     /* 探索情報のお知らせ */
-    if (newState == oldState)
-      return;
+    if (newState == oldState) return;
     if (oldState == SearchAlgorithm::SEARCHING_FOR_GOAL)
       hw->bz->play(hardware::Buzzer::SUCCESSFUL);  //< ゴールについた
     if (oldState == SearchAlgorithm::IDENTIFYING_POSITION &&
@@ -328,8 +319,7 @@ class MazeRobot : public RobotBase {
   bool auto_search_run() {
     /* 迷路のチェック */
     MR_LOGD("");
-    if (!auto_maze_check())
-      return false;
+    if (!auto_maze_check()) return false;
     /* 探索走行: スタート -> ゴール -> スタート */
     state.start_search_run();  //< 0 -> 1
     if (searchRun()) {
@@ -362,8 +352,7 @@ class MazeRobot : public RobotBase {
   bool auto_fast_run() {
     /* 迷路のチェック */
     MR_LOGD("");
-    if (!auto_maze_check())
-      return false;
+    if (!auto_maze_check()) return false;
     /* 最短経路の作成 */
     if (!calcShortestDirections(ma->rp_fast.diag_enabled)) {
       hw->bz->play(hardware::Buzzer::ERROR);
@@ -388,8 +377,7 @@ class MazeRobot : public RobotBase {
     /* 最短成功 */
     state.end_fast_run(true);
     /* ゴールで回収されるか待つ */
-    if (sp->ui->waitForPickup())
-      return false;  //< 回収された
+    if (sp->ui->waitForPickup()) return false;  //< 回収された
     /* 帰る */
     MR_LOGD("");
     return endFastRunBackingToStartRun();
@@ -410,8 +398,7 @@ class MazeRobot : public RobotBase {
       while (1) {
         /* 回収待ち */
         MR_LOGD("");
-        if (sp->ui->waitForPickup())
-          return false;
+        if (sp->ui->waitForPickup()) return false;
         /* 姿勢復帰走行 */
         ma->enable(MoveAction::TaskActionPositionRecovery);
         ma->waitForEndAction();
@@ -427,14 +414,12 @@ class MazeRobot : public RobotBase {
       }
       /* 姿勢復帰完了。回収待ち */
       MR_LOGD("");
-      if (sp->ui->waitForPickup())
-        return false;
+      if (sp->ui->waitForPickup()) return false;
       /* ゴール区画の訪問を指定 */
       setForceGoingToGoal(!state.get_has_reached_goal());
       /* 自己位置同定走行 */
       MR_LOGD("");
-      if (positionIdentifyRun())
-        break;
+      if (positionIdentifyRun()) break;
       /* エラー処理 */
       if (hw->mt->is_emergency()) {
         ma->emergency_release();  //< 自己位置同定中にクラッシュ

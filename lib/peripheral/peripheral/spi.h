@@ -13,11 +13,8 @@ namespace peripheral {
 
 class SPI {
  public:
-  static bool install(spi_host_device_t spi_host,
-                      gpio_num_t pin_sclk,
-                      gpio_num_t pin_miso,
-                      gpio_num_t pin_mosi,
-                      int dma_chain) {
+  static bool install(spi_host_device_t spi_host, gpio_num_t pin_sclk,
+                      gpio_num_t pin_miso, gpio_num_t pin_mosi, int dma_chain) {
     spi_bus_config_t bus_cfg = {
         .mosi_io_num = pin_mosi,
         .miso_io_num = pin_miso,

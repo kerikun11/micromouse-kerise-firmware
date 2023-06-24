@@ -52,11 +52,9 @@ class Hardware {
       bz->play(hardware::Buzzer::ERROR);
     /* LED */
     led = new LED();
-    if (!led->init(I2C_PORT_NUM_LED))
-      bz->play(hardware::Buzzer::ERROR);
+    if (!led->init(I2C_PORT_NUM_LED)) bz->play(hardware::Buzzer::ERROR);
     /* ADC for Battery, Reflector */
-    if (!peripheral::ADC::init())
-      bz->play(hardware::Buzzer::ERROR);
+    if (!peripheral::ADC::init()) bz->play(hardware::Buzzer::ERROR);
 
     /* Battery Check */
     if (batteryCheck())
@@ -79,12 +77,10 @@ class Hardware {
       bz->play(hardware::Buzzer::ERROR);
     /* Reflector */
     rfl = new Reflector(REFLECTOR_TX_PINS, REFLECTOR_RX_CHANNELS);
-    if (!rfl->init())
-      bz->play(hardware::Buzzer::ERROR);
+    if (!rfl->init()) bz->play(hardware::Buzzer::ERROR);
     /* ToF */
     tof = new ToF();
-    if (!tof->init(I2C_PORT_NUM_TOF))
-      bz->play(hardware::Buzzer::ERROR);
+    if (!tof->init(I2C_PORT_NUM_TOF)) bz->play(hardware::Buzzer::ERROR);
     /* Motor */
     mt = new Motor(MOTOR_L_CTRL1_PIN, MOTOR_L_CTRL2_PIN, MOTOR_R_CTRL1_PIN,
                    MOTOR_R_CTRL2_PIN);

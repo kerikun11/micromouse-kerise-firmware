@@ -1,5 +1,4 @@
 #include "app_log.h"
-
 #include "machine/machine.h"
 
 void kerise_main() {

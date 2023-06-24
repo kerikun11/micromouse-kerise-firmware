@@ -7,12 +7,12 @@
  */
 #pragma once
 
-#include "model.h"
-
 #include <driver/i2c.h>
 #include <driver/ledc.h>
 #include <driver/spi_master.h>
 #include <esp_adc/adc_oneshot.h>
+
+#include "model.h"
 
 /* Hardware Mapping */
 #define BAT_VOL_ADC1_CHANNEL ADC_CHANNEL_7

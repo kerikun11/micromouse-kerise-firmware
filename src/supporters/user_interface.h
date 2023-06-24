@@ -7,10 +7,10 @@
  */
 #pragma once
 
-#include "hardware/hardware.h"
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+
+#include "hardware/hardware.h"
 
 class UserInterface {
  public:

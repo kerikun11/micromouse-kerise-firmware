@@ -7,16 +7,16 @@
  */
 #pragma once
 
-#include "app_log.h"
-#include "config/io_mapping.h"  //< for KERISE_SELECT
-#include "config/model.h"       //< for ENCODER_NUM
-
 #include <drivers/as5048a/as5048a.h>
 #include <drivers/ma730/ma730.h>
 #include <freertospp/semphr.h>
 
 #include <cmath>
 #include <mutex>
+
+#include "app_log.h"
+#include "config/io_mapping.h"  //< for KERISE_SELECT
+#include "config/model.h"       //< for ENCODER_NUM
 
 namespace hardware {
 
@@ -95,8 +95,7 @@ class Encoder {
 #if KERISE_SELECT == 3 || KERISE_SELECT == 4
     constexpr int pulses_size = AS5048A_DUAL::PULSES_SIZE;
     as.update();
-    for (int i = 0; i < 2; i++)
-      pulses_raw[i] = as.get(i);
+    for (int i = 0; i < 2; i++) pulses_raw[i] = as.get(i);
 #elif KERISE_SELECT == 5
     constexpr int pulses_size = MA730::PULSES_SIZE;
     for (int i = 0; i < 2; i++) {

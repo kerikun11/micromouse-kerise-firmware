@@ -7,6 +7,7 @@
  */
 #pragma once
 
+#include <config/config.h>
 #include <driver/ledc.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>

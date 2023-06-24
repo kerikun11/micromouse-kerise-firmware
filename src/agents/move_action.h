@@ -7,11 +7,6 @@
  */
 #pragma once
 
-#include "config/model.h"
-#include "config/slalom_shapes.h"
-#include "hardware/hardware.h"
-#include "supporters/supporters.h"
-
 #include <MazeLib/RobotBase.h>  //< for RobotBase::SearchAction
 #include <ctrl/accel_designer.h>
 #include <ctrl/slalom.h>
@@ -19,12 +14,17 @@
 #include <ctrl/trajectory_tracker.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <utils/concurrent_queue.hpp>
-#include <utils/math_utils.hpp>  //< for round2, saturate
 
 #include <cmath>
 #include <condition_variable>
 #include <mutex>
+#include <utils/concurrent_queue.hpp>
+#include <utils/math_utils.hpp>  //< for round2, saturate
+
+#include "config/model.h"
+#include "config/slalom_shapes.h"
+#include "hardware/hardware.h"
+#include "supporters/supporters.h"
 
 /* ログ */
 // #define MA_LOG_LEVEL 4
@@ -118,15 +118,13 @@ class MoveAction {
     }
     void up(const int cnt = 1) {
       for (int i = 0; i < cnt; ++i) {
-        for (auto& vs : v_slalom)
-          vs *= vs_factor;
+        for (auto& vs : v_slalom) vs *= vs_factor;
         v_max *= vm_factor, a_max *= am_factor;
       }
     }
     void down(const int cnt = 1) {
       for (int i = 0; i < cnt; ++i) {
-        for (auto& vs : v_slalom)
-          vs /= vs_factor;
+        for (auto& vs : v_slalom) vs /= vs_factor;
         v_max /= vm_factor, a_max /= am_factor;
       }
     }
@@ -141,15 +139,12 @@ class MoveAction {
   supporters::Supporters* sp;
 
  public:
-  MoveAction(hardware::Hardware* hw,
-             supporters::Supporters* sp,
+  MoveAction(hardware::Hardware* hw, supporters::Supporters* sp,
              const ctrl::TrajectoryTracker::Gain& gain)
       : hw(hw), sp(sp), tt_gain(gain) {
     /* set default parameters */
-    for (auto& vs : rp_search.v_slalom)
-      vs = rp_search.v_search;
-    for (auto& vs : rp_fast.v_slalom)
-      vs = rp_search.v_search;
+    for (auto& vs : rp_search.v_slalom) vs = rp_search.v_search;
+    for (auto& vs : rp_fast.v_slalom) vs = rp_search.v_search;
     /* デフォルトは既知区間斜めを無効化 */
     rp_search.diag_enabled = false;
     /* start */
@@ -165,8 +160,7 @@ class MoveAction {
   }
   void disable() {
     MA_LOGI("%s", getTaskActionName(task_action));
-    if (state != State::STATE_DISABLED)
-      state_update(State::STATE_BREAKING);
+    if (state != State::STATE_DISABLED) state_update(State::STATE_BREAKING);
     state_wait(State::STATE_DISABLED);
     flush_action();
   }
@@ -178,13 +172,11 @@ class MoveAction {
   void enqueue_action(const MazeLib::RobotBase::SearchAction action) {
     MA_LOGI("%s", MazeLib::RobotBase::getSearchActionName(action));
     sa_queue.push(action);
-    if (state == STATE_WAITING)
-      state_update(State::STATE_RUNNING);
+    if (state == STATE_WAITING) state_update(State::STATE_RUNNING);
   }
   void flush_action() {
     MA_LOGD("");
-    while (!sa_queue.empty())
-      sa_queue.pop();
+    while (!sa_queue.empty()) sa_queue.pop();
   }
   void set_fast_path(const std::string& fast_path) {
     this->fast_path = fast_path;
@@ -281,14 +273,12 @@ class MoveAction {
   }
 
   bool front_wall_attach(bool force = false) {
-    if (is_break_state())
-      return false;
+    if (is_break_state()) return false;
     /* 強制モードのときは1マス先の壁でも補正 */
     if (force && hw->tof->getDistance() > field::SegWidthFull * 4 / 3)
       return false;
     /* 通常モードのときは1マス以内 */
-    if (!force && hw->tof->getDistance() > field::SegWidthFull)
-      return false;
+    if (!force && hw->tof->getDistance() > field::SegWidthFull) return false;
     /* wall_attach start */
     bool result = false;
     hw->led->set(6);
@@ -296,8 +286,7 @@ class MoveAction {
     vTaskDelay(pdMS_TO_TICKS(20));
     sp->sc->reset();  //< 初動防止のため位置をクリア
     for (int i = 0; i < 2000; i++) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       /* 差分計算 */
       WheelParameter wp;
       for (int j = 0; j < 2; ++j) {
@@ -329,22 +318,18 @@ class MoveAction {
   }
   void front_wall_fix(const RunParameter& rp, bool force = false) {
     /* 適用条件の判定 */
-    if (!rp.front_wall_fix_enabled || !hw->tof->isValid())
-      return;
+    if (!rp.front_wall_fix_enabled || !hw->tof->isValid()) return;
     const int tof_mm = hw->tof->getDistance();
     const int passed_ms = hw->tof->passedTimeMs();
     /* 前壁1マス付近、かつ、サンプリング後1ms以内の場合のみ */
-    if (!force && (std::abs(tof_mm - 90) > 30 || passed_ms > 1))
-      return;
-    if (force && (tof_mm < 60 || 150 < tof_mm || passed_ms > 6))
-      return;
+    if (!force && (std::abs(tof_mm - 90) > 30 || passed_ms > 1)) return;
+    if (force && (tof_mm < 60 || 150 < tof_mm || passed_ms > 6)) return;
     /* 現在の姿勢が区画に対して垂直か調べる */
     const auto& p = sp->sc->est_p;        //< 局所座標系における位置
     const float th_g = offset.th + p.th;  //< グローバル姿勢
     const float th_g_w = math_utils::round2(th_g, PI / 2);  //< 直近の壁の姿勢
     constexpr float theta_threshold = PI * 0.5f / 180;
-    if (std::abs(th_g - th_g_w) > theta_threshold)
-      return;
+    if (std::abs(th_g - th_g_w) > theta_threshold) return;
     /* 壁との距離を取得 */
     constexpr float wall_fix_offset = model::wall_fix_offset;  //< 大: 壁に近く
     const float d_tof =
@@ -383,8 +368,7 @@ class MoveAction {
     const float th_g = offset.th + p.th;  //< グローバル姿勢
     const float th_g_w = math_utils::round2(th_g, PI / 2);  //< 直近の壁の姿勢
     constexpr float theta_threshold = PI * 0.5f / 180;
-    if (std::abs(th_g - th_g_w) > theta_threshold)
-      return;
+    if (std::abs(th_g - th_g_w) > theta_threshold) return;
     /* グローバル位置に変換 */
     const auto p_g = offset + p.rotate(offset.th);  //< グローバル位置
     const float y_g = p_g.rotate(-th_g_w).y;        //< グローバル横位置
@@ -473,8 +457,7 @@ class MoveAction {
     hw->led->set(led_flags);
   }
   void side_wall_cut(const RunParameter& rp, wall_cut_data_t& wall_cut_data) {
-    if (!rp.side_wall_cut_enabled || isDiag())
-      return;
+    if (!rp.side_wall_cut_enabled || isDiag()) return;
     /* 左右それぞれ */
     for (int i = 0; i < 2; i++) {
       bool wall = sp->wd->walls.side[i];
@@ -508,13 +491,9 @@ class MoveAction {
       wall_cut_data.prev_wall[i] = wall;
     }
   }
-  void straight_x(const float distance,
-                  float v_max,
-                  float v_end,
-                  const RunParameter& rp,
-                  bool unknown_accel = false) {
-    if (is_break_state())
-      return;
+  void straight_x(const float distance, float v_max, float v_end,
+                  const RunParameter& rp, bool unknown_accel = false) {
+    if (is_break_state()) return;
     /* 未知区間加速の反映 */
     v_end = unknown_accel ? rp.v_unknown_accel : v_end;
     v_max = unknown_accel ? rp.v_unknown_accel : v_max;
@@ -537,8 +516,7 @@ class MoveAction {
                        sp->sc->est_p.x);
       tt.reset(v_start);
       for (float t = 0; true; t += sp->sc->Ts) {
-        if (is_break_state())
-          break;
+        if (is_break_state()) break;
         /* 終了条件 */
         const float remain = distance - sp->sc->est_p.x;
         if (remain < 0 || t > trajectory.t_end())
@@ -549,8 +527,7 @@ class MoveAction {
           /* 衝突被害軽減ブレーキ (AEBS) */
           if (remain > field::SegWidthFull && tof_mm < field::SegWidthFull)
             wall_stop_aebs();
-          if (v_end > 1 && tof_mm < field::SegWidthFull / 2)
-            wall_stop_aebs();
+          if (v_end > 1 && tof_mm < field::SegWidthFull / 2) wall_stop_aebs();
           /* 未知区間加速の緊急キャンセル */
           if (unknown_accel && tof_mm < 1.8f * field::SegWidthFull) {
             unknown_accel = false;
@@ -582,16 +559,14 @@ class MoveAction {
     offset += ctrl::Pose(distance, 0, 0).rotate(offset.th);
   }
   void turn(const float angle) {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     const float dddth_max = 2400 * PI;
     const float ddth_max = 54 * PI;
     const float dth_max = 4 * PI;
     constexpr float back_gain = model::turn_back_gain;
     ctrl::AccelDesigner ad(dddth_max, ddth_max, dth_max, 0, 0, angle);
     for (float t = 0; t < ad.t_end(); t += sp->sc->Ts) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       sp->sc->sampling_sync();
       const float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                           sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
@@ -600,8 +575,7 @@ class MoveAction {
     /* 確実に目標角度に持っていく処理 */
     float int_error = 0;
     while (1) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       sp->sc->sampling_sync();
       float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                     sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
@@ -610,8 +584,7 @@ class MoveAction {
       const float error = angle - sp->sc->est_p.th;
       int_error += error * sp->sc->Ts;
       sp->sc->set_target(-delta * back_gain, Kp * error + Ki * int_error);
-      if (std::abs(Kp * error) + std::abs(Ki * int_error) < 0.1f * PI)
-        break;
+      if (std::abs(Kp * error) + std::abs(Ki * int_error) < 0.1f * PI) break;
     }
     /* 移動した量だけ位置を更新 */
     const auto net = ctrl::Pose(0, 0, angle);
@@ -619,8 +592,7 @@ class MoveAction {
     offset += net.rotate(offset.th);
   }
   void trace(ctrl::slalom::Trajectory& trajectory, const RunParameter& rp) {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     /* 前壁補正 */
     front_wall_fix(rp, true);  //< ステップ変化を許容
     /* prepare */
@@ -635,8 +607,7 @@ class MoveAction {
     if (std::abs(sp->sc->est_p.x) > 1)
       hw->bz->play(hardware::Buzzer::MAZE_BACKUP);  //< 現在位置が進みすぎ警告
     for (float t = 0; t < trajectory.getTimeCurve(); t += Ts) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       /* データの更新 */
       sp->sc->sampling_sync();
       /* 壁補正 */
@@ -659,13 +630,10 @@ class MoveAction {
     sp->sc->update_pose((sp->sc->est_p - net).rotate(-net.th));
     offset += net.rotate(offset.th);
   }
-  void SlalomProcess(const field::ShapeIndex si,
-                     const bool mirror_x,
-                     const bool reverse,
-                     float& straight,
+  void SlalomProcess(const field::ShapeIndex si, const bool mirror_x,
+                     const bool reverse, float& straight,
                      const RunParameter& rp) {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     const auto& shape = field::shapes[si];
     ctrl::slalom::Trajectory st(shape, mirror_x);
     const auto straight_prev = shape.straight_prev;
@@ -683,8 +651,7 @@ class MoveAction {
     straight += reverse ? straight_prev : straight_post;
   }
   void u_turn() {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     /* 前壁あり：横壁なし方向でターン */
     /* 前壁なし：横壁あり方向でターン */
     int dir = (sp->wd->distance.side[0] > sp->wd->distance.side[1]) ? -1 : 1;
@@ -700,8 +667,7 @@ class MoveAction {
     sp->sc->fix_pose({model::CenterOffsetY, 0, 0}, true);
   }
   void wall_stop_aebs() {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     hw->bz->play(hardware::Buzzer::AEBS);
     // ToDo: compiler bug avoidance!
     for (float v = sp->sc->ref_v.tra; v > 0; v -= 12) {
@@ -715,8 +681,7 @@ class MoveAction {
     state_update(State::STATE_BREAKING);
   }
   void start_step(const RunParameter& rp) {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     sp->sc->disable();
     hw->mt->drive(-0.2f, -0.2f); /*< 背中を確実に壁につける */
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -728,8 +693,7 @@ class MoveAction {
     straight_x(field::SegWidthFull, rp.v_search, rp.v_search, rp);
   }
   void start_init() {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     front_wall_attach();
     turn(PI / 2);
     front_wall_attach();
@@ -739,8 +703,7 @@ class MoveAction {
     state_update(State::STATE_BREAKING);
   }
   void put_back() {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     const int max_v = 150;
     const float th_gain = 50.0f;
     for (int i = 0; i < max_v; i++) {
@@ -769,21 +732,17 @@ class MoveAction {
     offset = ctrl::Pose(field::SegWidthFull / 2, field::SegWidthFull / 2);
     while (1) {
       /* 離脱確認 */
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       /* 壁を確認 (区画の切り替わり位置にいるはず) */
       walls = sp->wd->walls;
       MA_LOG_POSE;
       MA_LOGD("wall: %s", sp->wd->get_info());
       /* 探索器に終了を通知 */
-      if (sa_queue.empty())
-        state_update(State::STATE_WAITING);
+      if (sa_queue.empty()) state_update(State::STATE_WAITING);
       /* Actionがキューされるまで直進で待つ */
-      if (sa_queue.empty())
-        search_run_queue_wait_decel(rp);
+      if (sa_queue.empty()) search_run_queue_wait_decel(rp);
       /* 既知区間走行 */
-      if (sa_queue.size() >= 2)
-        search_run_known(rp);
+      if (sa_queue.size() >= 2) search_run_known(rp);
       MA_LOG_POSE;
       /* 探索走行 */
       if (!sa_queue.empty()) {
@@ -805,8 +764,7 @@ class MoveAction {
     /* start */
     tt.reset(v_start);
     for (float t = 0; sa_queue.empty(); t += sp->sc->Ts) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       sp->sc->sampling_sync();
       /* 壁補正 */
       hw->led->set(0);
@@ -824,8 +782,7 @@ class MoveAction {
     /* path の作成 */
     std::string path;
     while (1) {
-      if (sa_queue.empty())
-        break;
+      if (sa_queue.empty()) break;
       const auto action = sa_queue.front();
       if (action == MazeLib::RobotBase::SearchAction::ST_HALF ||
           action == MazeLib::RobotBase::SearchAction::ST_FULL ||
@@ -860,8 +817,7 @@ class MoveAction {
   }
   void search_run_switch(const MazeLib::RobotBase::SearchAction action,
                          const RunParameter& rp) {
-    if (is_break_state())
-      return;
+    if (is_break_state()) return;
     const bool no_front_front_wall =
         hw->tof->getDistance() >
         field::SegWidthFull * 2 + field::SegWidthFull / 2;
@@ -898,8 +854,7 @@ class MoveAction {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 0);
           straight_x(st.getShape().straight_prev, v_s, v_s, rp);
-          if (sp->wd->walls.side[0])
-            return wall_stop_aebs();
+          if (sp->wd->walls.side[0]) return wall_stop_aebs();
           trace(st, rp);
           straight_x(st.getShape().straight_post, v_s, v_s, rp);
         }
@@ -916,8 +871,7 @@ class MoveAction {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 1);
           straight_x(st.getShape().straight_prev, v_s, v_s, rp);
-          if (sp->wd->walls.side[1])
-            return wall_stop_aebs();
+          if (sp->wd->walls.side[1]) return wall_stop_aebs();
           trace(st, rp);
           straight_x(st.getShape().straight_post, v_s, v_s, rp);
         }
@@ -961,8 +915,7 @@ class MoveAction {
         field::SegWidthFull / 2 - model::TailLength - field::WallThickness / 2;
     /* 走行 */
     for (int path_index = 0; path_index < path.length(); path_index++) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       const auto action =
           static_cast<MazeLib::RobotBase::FastAction>(path[path_index]);
       fast_run_switch(action, straight, rp);
@@ -984,8 +937,7 @@ class MoveAction {
     return true;
   }
   void fast_run_switch(const MazeLib::RobotBase::FastAction action,
-                       float& straight,
-                       const RunParameter& rp) {
+                       float& straight, const RunParameter& rp) {
     MA_LOGD("FastAction: %s", MazeLib::RobotBase::getFastActionName(action));
     switch (action) {
       case MazeLib::RobotBase::FastAction::F45_L:
@@ -1067,8 +1019,7 @@ class MoveAction {
     sp->sc->enable();
     int index = 0;
     for (float t = 0; t < ad.t_end(); t += sp->sc->Ts) {
-      if (is_break_state())
-        break;
+      if (is_break_state()) break;
       sp->sc->sampling_sync();
       const float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                           sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
@@ -1084,8 +1035,7 @@ class MoveAction {
     float min_var = 999;
     int min_i = 0;
     for (int i = 0; i < table_size; ++i) {
-      if (!is_valid[i])
-        continue;
+      if (!is_valid[i]) continue;
       const int window = table_size / 12;
       int sum = 0;
       for (int j = -window / 2; j < window / 2; ++j)
@@ -1113,8 +1063,7 @@ class MoveAction {
                                                              : -PI / 2);
     /* 壁のない方向を向く */
     while (!hw->mt->is_emergency()) {
-      if (hw->tof->getDistance() > field::SegWidthFull)
-        break;
+      if (hw->tof->getDistance() > field::SegWidthFull) break;
       front_wall_attach(true);
       turn(-PI / 2);
     }

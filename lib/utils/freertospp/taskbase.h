@@ -38,8 +38,7 @@ class TaskBase {
    * @return true
    * @return false
    */
-  bool createTask(const char* pcName,
-                  UBaseType_t uxPriority = 0,
+  bool createTask(const char* pcName, UBaseType_t uxPriority = 0,
                   const uint16_t usStackDepth = configMINIMAL_STACK_SIZE,
                   const BaseType_t xCoreID = tskNO_AFFINITY) {
     if (pxCreatedTask != NULL) {

@@ -55,16 +55,11 @@ class Button {
 
   void update() {
     if (gpio_get_level(pin) == 0) {
-      if (counter < button_time_long_press_3 + 1)
-        counter++;
-      if (counter == button_time_long_press_3)
-        long_pressing_3 = 1;
-      if (counter == button_time_long_press_2)
-        long_pressing_2 = 1;
-      if (counter == button_time_long_press_1)
-        long_pressing_1 = 1;
-      if (counter == button_time_press)
-        pressing = 1;
+      if (counter < button_time_long_press_3 + 1) counter++;
+      if (counter == button_time_long_press_3) long_pressing_3 = 1;
+      if (counter == button_time_long_press_2) long_pressing_2 = 1;
+      if (counter == button_time_long_press_1) long_pressing_1 = 1;
+      if (counter == button_time_press) pressing = 1;
     } else {
       if (counter >= button_time_long_press_3)
         long_pressed_3 = 1;

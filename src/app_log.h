@@ -6,10 +6,10 @@
  */
 #pragma once
 
-#include "config/config.h"  //< for APP_LOG_LEVEL
-
 #include <esp_timer.h>  //< esp_timer_get_time
 #include <stdio.h>      //< for printf
+
+#include "config/config.h"  //< for APP_LOG_LEVEL
 
 /* app log mode */
 #ifndef APP_LOG_MEM_MODE
@@ -30,17 +30,16 @@
 #define APP_LOG_BUFFER_SIZE 32768
 static int app_log_buffer_ptr = 0;
 static char app_log_buffer[APP_LOG_BUFFER_SIZE];
-#define APP_LOG_BASE(l, c, f, ...)                                         \
-  do {                                                                     \
-    const int us = esp_timer_get_time();                                   \
-    if (app_log_buffer_ptr > APP_LOG_BUFFER_SIZE - 64)                     \
-      app_log_buffer_ptr = 0;                                              \
-    app_log_buffer_ptr +=                                                  \
-        snprintf(app_log_buffer + app_log_buffer_ptr,                      \
-                 APP_LOG_BUFFER_SIZE - app_log_buffer_ptr,                 \
-                 c "[" l "][%d.%06d][" __FILE__                            \
-                   ":" APP_LOG_TO_STRING(__LINE__) "][%s]\e[0m\t" f "\n",  \
-                 us / 1'000'000, us % 1'000'000, __func__, ##__VA_ARGS__); \
+#define APP_LOG_BASE(l, c, f, ...)                                             \
+  do {                                                                         \
+    const int us = esp_timer_get_time();                                       \
+    if (app_log_buffer_ptr > APP_LOG_BUFFER_SIZE - 64) app_log_buffer_ptr = 0; \
+    app_log_buffer_ptr +=                                                      \
+        snprintf(app_log_buffer + app_log_buffer_ptr,                          \
+                 APP_LOG_BUFFER_SIZE - app_log_buffer_ptr,                     \
+                 c "[" l "][%d.%06d][" __FILE__                                \
+                   ":" APP_LOG_TO_STRING(__LINE__) "][%s]\e[0m\t" f "\n",      \
+                 us / 1'000'000, us % 1'000'000, __func__, ##__VA_ARGS__);     \
   } while (0)
 #define APP_LOG_DUMP()                                 \
   do {                                                 \

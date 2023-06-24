@@ -1,6 +1,6 @@
 /**
  * @file machine.h
- * @brief MircoMouse Machine
+ * @brief MicroMouse Machine
  * @author Ryotaro Onuki <kerikun11+github@gmail.com>
  * @date 2021-11-21
  * @copyright Copyright 2021 Ryotaro Onuki <kerikun11+github@gmail.com>

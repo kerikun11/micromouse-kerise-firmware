@@ -9,8 +9,8 @@
 
 #include <MazeLib/RobotBase.h>  //< for RobotBase::SearchAction
 #include <ctrl/accel_designer.h>
-#include <ctrl/slalom.h>
-#include <ctrl/straight.h>
+#include <ctrl/slalom/trajectory.h>
+#include <ctrl/straight/trajectory.h>
 #include <ctrl/trajectory_tracker.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>

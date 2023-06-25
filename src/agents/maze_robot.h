@@ -18,17 +18,17 @@
 using namespace MazeLib;
 
 /* 大会前には必ず 0 にする */
-#define MAZEROBOT_TIMEOUT_SELECT 1
-#define MAZEROBOT_GOAL_SELECT 1
+#define MAZE_ROBOT_TIMEOUT_SELECT 1
+#define MAZE_ROBOT_GOAL_SELECT 1
 
 /* ゴール座標 */
-#if MAZEROBOT_GOAL_SELECT == 0
+#if MAZE_ROBOT_GOAL_SELECT == 0
 #define MAZE_GOAL \
   { MazeLib::Position(16, 16) }
-#elif MAZEROBOT_GOAL_SELECT == 1
+#elif MAZE_ROBOT_GOAL_SELECT == 1
 #define MAZE_GOAL \
   { MazeLib::Position(1, 0) }
-#elif MAZEROBOT_GOAL_SELECT == 2
+#elif MAZE_ROBOT_GOAL_SELECT == 2
 #define MAZE_GOAL \
   { MazeLib::Position(7, 7) }
 #endif
@@ -68,7 +68,7 @@ class MazeRobot : public RobotBase {
     static constexpr int max_try_count = 5;
 
    public:
-    State() { set_timeout(MAZEROBOT_TIMEOUT_SELECT); }
+    State() { set_timeout(MAZE_ROBOT_TIMEOUT_SELECT); }
     void set_timeout(int size) {
       switch (size) {
         case 0:

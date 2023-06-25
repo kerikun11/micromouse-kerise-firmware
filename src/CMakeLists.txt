@@ -1,8 +1,8 @@
 # main component of ESP-IDF
 
-FILE(GLOB_RECURSE app_sources ${CMAKE_CURRENT_SOURCE_DIR}/*.*)
+FILE(GLOB_RECURSE GLOBED_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/*.*)
 
-idf_component_register(SRCS ${app_sources})
+idf_component_register(SRCS ${GLOBED_SRCS})
 
 # c.f. gcc warnings: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 component_compile_options(

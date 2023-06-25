@@ -17,8 +17,6 @@ static float round2(float value, float div) {
 static float saturate(float src, float sat) {
   return std::max(std::min(src, sat), -sat);
 }
-static float sum_of_square(float v1, float v2) {
-  return v1 * v1 + v2 * v2;
-}
+static float sum_of_square(float v1, float v2) { return v1 * v1 + v2 * v2; }
 
 }  // namespace math_utils

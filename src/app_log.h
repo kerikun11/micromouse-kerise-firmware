@@ -26,6 +26,7 @@
 #define APP_LOG_TO_STRING(n) APP_LOG_STRINGIFY(n)
 /* app log base */
 #if APP_LOG_MEM_MODE
+#warning "APP_LOG_MEM_MODE is enabled"
 /* app log mem */
 #define APP_LOG_BUFFER_SIZE 32768
 static int app_log_buffer_ptr = 0;
@@ -78,4 +79,9 @@ static char app_log_buffer[APP_LOG_BUFFER_SIZE];
 #define APP_LOGD(fmt, ...) APP_LOG_BASE("D", "\e[34m", fmt, ##__VA_ARGS__)
 #else
 #define APP_LOGD(fmt, ...)
+#endif
+
+/* show warning */
+#if APP_LOG_LEVEL > 2
+#warning "APP_LOGD Enabled"
 #endif

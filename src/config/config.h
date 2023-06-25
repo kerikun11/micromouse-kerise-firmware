@@ -8,7 +8,7 @@
 #pragma once
 
 /* Log Target */
-#define APP_LOG_MEM_MODE 1
+#define APP_LOG_MEM_MODE 0
 
 /* Log Level */
 #define APP_LOG_LEVEL 2

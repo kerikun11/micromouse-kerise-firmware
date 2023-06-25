@@ -8,6 +8,7 @@
 #pragma once
 
 #include <driver/mcpwm.h>
+// #include <driver/mcpwm_prelude.h>
 
 #include <algorithm>  //< std::max(), std::min()
 #include <cmath>      //< std::isfinit()
@@ -21,6 +22,21 @@ class OneMotor {
            mcpwm_io_signals_t io_signals_1, mcpwm_io_signals_t io_signals_2,
            gpio_num_t gpio_num_1, gpio_num_t gpio_num_2)
       : unit(unit), timer(timer) {
+    // mcpwm_timer_handle_t timer = NULL;
+    // mcpwm_timer_config_t timer_config = {
+    //     .group_id = 0,
+    //     .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
+    //     .resolution_hz = 160'000'000,
+    //     .period_ticks = 160'000'000 / 250'000,
+    //     .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
+    // };
+    // ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &timer));
+    // mcpwm_oper_handle_t oper = NULL;
+    // mcpwm_operator_config_t operator_config = {
+    //     .group_id = 0,
+    // };
+    // ESP_ERROR_CHECK(mcpwm_new_operator(&operator_config, &oper));
+
     ESP_ERROR_CHECK(mcpwm_group_set_resolution(unit, 160'000'000L));
     ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals_1, gpio_num_1));
     ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals_2, gpio_num_2));

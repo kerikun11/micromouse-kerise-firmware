@@ -1,7 +1,7 @@
 #include "app_log.h"
 #include "machine/machine.h"
 
-void kerise_main() {
+void app_mouse() {
   /* pull-down motor pin */
   gpio_config_t config = {
       .pin_bit_mask = ((uint64_t)1 << MOTOR_L_CTRL1_PIN) |

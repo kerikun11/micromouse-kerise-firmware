@@ -1,6 +1,6 @@
 # main component of ESP-IDF
 
-FILE(GLOB_RECURSE GLOBED_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/*.*)
+FILE(GLOB_RECURSE GLOBED_SRCS *.cpp *.c)
 
 idf_component_register(SRCS ${GLOBED_SRCS})
 

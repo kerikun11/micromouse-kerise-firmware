@@ -9,7 +9,7 @@
 
 #include "app_log.h"
 
-void devkit_main() {
+void app_devkit() {
   APP_LOGI("This is ESP32 DevKit");
   APP_LOGI("CPU Freq: %d MHz", peripheral::ESP::get_cpu_freq_in_mhz());
 

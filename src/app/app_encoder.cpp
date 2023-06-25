@@ -19,6 +19,20 @@ void app_encoder() {
     gpio_set_direction(p, GPIO_MODE_INPUT);
     gpio_pullup_en(p);
   }
+  /* SPI for IMU, Encoder */
+  if (!peripheral::SPI::install(CONFIG_SPI_HOST, CONFIG_SPI_SCLK_PIN,
+                                CONFIG_SPI_MISO_PIN, CONFIG_SPI_MOSI_PIN,
+                                CONFIG_SPI_DMA_CHAIN))
+    APP_LOGE("install failed");
+  /* Encoder */
+  auto* enc = new hardware::Encoder();
+  if (!enc->init(ENCODER_SPI_HOST, ENCODER_CS_PINS))
+    APP_LOGE("enc init failed");
+  /* main */
+  while (1) {
+    APP_LOGI("%d %d", enc->get_raw(0), enc->get_raw(1));
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
   /* infinite loop */
   vTaskDelay(portMAX_DELAY);
 }

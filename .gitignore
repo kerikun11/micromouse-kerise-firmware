@@ -7,4 +7,4 @@ sdkconfig*.old
 .pioenvs
 .piolibdeps
 .vscode
-/platformio-device-monitor-*.log
+/logs/device-monitor-*.log

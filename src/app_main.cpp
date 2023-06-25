@@ -9,21 +9,24 @@
 
 void app_mouse();
 void app_devkit();
-void app_main_encoder();
+void app_encoder();
 
 extern "C" void app_main() {
   /* for debug */
-  // return app_main_encoder();
+  // app_encoder(), vTaskDelay(portMAX_DELAY);
   /* Check ID */
   uint64_t mac = peripheral::ESP::get_mac();
   switch (mac) {
     case 0x080C'401D'A0D8:  //< KERISE v4
     case 0x807F'631D'A0D8:  //< KERISE v4 Copy
     case 0xD866'5A1D'A0D8:  //< KERISE v5
-      return app_mouse();
+      app_mouse();
+      vTaskDelay(portMAX_DELAY);
+      break;
     default:
       APP_LOGW("unknown ESP32 MAC: 0x%012llX", mac);
-      return app_devkit();
+      app_devkit();
+      vTaskDelay(portMAX_DELAY);
+      break;
   }
-  vTaskDelay(portMAX_DELAY);
 }

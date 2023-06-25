@@ -14,9 +14,6 @@
 #define APP_LOG_LEVEL 2
 #define MR_LOG_LEVEL 4
 #define MA_LOG_LEVEL 4
-#if APP_LOG_LEVEL > 2
-#warning "APP_LOGD Enabled"
-#endif
 
 /* Task Priority */
 #define TASK_PRIORITY_REFLECTOR 20

@@ -19,7 +19,7 @@ class AS5048A_DUAL {
   AS5048A_DUAL() {}
   bool init(const spi_host_device_t spi_host, const int8_t pin_cs) {
     // ESP-IDF SPI device initialization
-    static spi_device_interface_config_t dev_cfg = {
+    spi_device_interface_config_t dev_cfg = {
         .command_bits = 1,
         .address_bits = 0,
         .dummy_bits = 0,
@@ -41,7 +41,7 @@ class AS5048A_DUAL {
   bool update() {
     bool res = true;
     /* transaction */
-    static spi_transaction_t tx;
+    spi_transaction_t tx{};
     tx.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
     tx.tx_data[0] = tx.tx_data[1] = tx.tx_data[2] = tx.tx_data[3] = 0xFF;
     tx.length = 32;

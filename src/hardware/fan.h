@@ -7,45 +7,54 @@
  */
 #pragma once
 
-#include <driver/mcpwm.h>
-
-#include <algorithm>  //< for std::min std::max
+#include <algorithm>  //< for std::min std::max std::clamp
 
 namespace hardware {
 
 class Fan {
  public:
-  Fan(gpio_num_t gpio_num, mcpwm_unit_t unit = MCPWM_UNIT_1,
-      mcpwm_timer_t timer = MCPWM_TIMER_0,
-      mcpwm_io_signals_t io_signals = MCPWM0A)
-      : gpio_num(gpio_num), unit(unit), timer(timer) {
-    ESP_ERROR_CHECK(mcpwm_gpio_init(unit, io_signals, gpio_num));
-    mcpwm_config_t pwm_config = {
-        .frequency = 250000,  //< frequency (period: 640 <= 160MHz/250kHz)
-        .cmpr_a = 0,          //< duty cycle of PWMxA = 0
-        .cmpr_b = 0,          //< duty cycle of PWMxB = 0
-        .duty_mode = MCPWM_DUTY_MODE_0,
-        .counter_mode = MCPWM_UP_COUNTER,
+  Fan(gpio_num_t gpio_num, ledc_timer_t timer, ledc_channel_t channel)
+      : timer(timer), channel(channel) {
+    const uint32_t freq = 100'000;
+    const ledc_timer_bit_t duty_resolution = LEDC_TIMER_6_BIT;
+    duty_max = (2 << duty_resolution) - 1;
+    // LEDC Timer
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode = mode,
+        .duty_resolution = duty_resolution,
+        .timer_num = timer,
+        .freq_hz = freq,
+        .clk_cfg = LEDC_AUTO_CLK,
     };
-    ESP_ERROR_CHECK(mcpwm_init(unit, timer, &pwm_config));
-  }
-  ~Fan() {
-    mcpwm_stop(unit, timer);
-    gpio_reset_pin(gpio_num);
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+    // LEDC Channel
+    ledc_channel_config_t ledc_channel = {
+        .gpio_num = gpio_num,
+        .speed_mode = mode,
+        .channel = channel,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = timer,
+        .duty = 0,
+        .hpoint = 0,
+        .flags{
+            .output_invert = 0,
+        },
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
   }
   void drive(float duty) {
-    float duty_cycle = duty * 100;  //< from [0,1] to [0,100]
-    duty_cycle = std::min(duty_cycle, 100.0f);
-    duty_cycle = std::max(duty_cycle, 0.0f);
-    mcpwm_set_duty(unit, timer, MCPWM_OPR_A, duty_cycle);
-    mcpwm_set_duty_type(unit, timer, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
+    uint32_t duty_cycles = duty * duty_max;
+    duty_cycles = std::clamp(duty_cycles, static_cast<uint32_t>(0), duty_max);
+    ESP_ERROR_CHECK(ledc_set_duty(mode, channel, duty_cycles));
+    ESP_ERROR_CHECK(ledc_update_duty(mode, channel));
   }
-  void free() { mcpwm_set_signal_low(unit, timer, MCPWM_OPR_A); }
+  void free() { drive(0); }
 
  private:
-  gpio_num_t gpio_num;
-  mcpwm_unit_t unit;
-  mcpwm_timer_t timer;
+  ledc_timer_t timer;
+  ledc_channel_t channel;
+  ledc_mode_t mode = LEDC_HIGH_SPEED_MODE;
+  uint32_t duty_max;
 };
 
 };  // namespace hardware

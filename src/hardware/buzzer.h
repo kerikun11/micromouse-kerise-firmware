@@ -44,10 +44,10 @@ class Buzzer {
 
  public:
   static Buzzer* get_instance() {
-    static Buzzer* instatnce = new Buzzer();
-    return instatnce;
+    static Buzzer* instance = new Buzzer();
+    return instance;
   }
-  bool init(gpio_num_t gpio_num, ledc_channel_t channel, ledc_timer_t timer) {
+  bool init(gpio_num_t gpio_num, ledc_timer_t timer, ledc_channel_t channel) {
     this->channel = channel;
     this->timer = timer;
     // LEDC Timer
@@ -65,7 +65,7 @@ class Buzzer {
         .speed_mode = mode,
         .channel = channel,
         .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = LEDC_TIMER_0,
+        .timer_sel = timer,
         .duty = 0,
         .hpoint = 0,
         .flags{
@@ -121,7 +121,7 @@ class Buzzer {
       mute(0);
     }
   }
-  void ledc_write_note(note_t note, uint8_t octave) {
+  void write_note(note_t note, uint8_t octave) {
     static const uint32_t noteFrequencyBase[NOTE_MAX] = {
         // C    C#     D    Eb     E     F    F#     G    G#     A    Bb     B
         4186, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902};
@@ -130,17 +130,18 @@ class Buzzer {
       return;
     }
     uint32_t freq = noteFrequencyBase[note] / (1 << (8 - octave));
-    ledc_set_freq(mode, timer, freq);
-    ledc_set_duty(mode, channel, 4);  //< duty in [0, 2^duty_resolution]
-    ledc_update_duty(mode, channel);
+    ESP_ERROR_CHECK(ledc_set_freq(mode, timer, freq));
+    ESP_ERROR_CHECK(
+        ledc_set_duty(mode, channel, 4));  //< duty in [0, 2^duty_resolution]
+    ESP_ERROR_CHECK(ledc_update_duty(mode, channel));
   }
   void note(const note_t note, const uint8_t octave, const uint32_t dur_ms) {
-    ledc_write_note(note, octave);
+    write_note(note, octave);
     vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
   void mute(uint32_t dur_ms = 200) {
-    ledc_set_duty(mode, channel, 0);
-    ledc_update_duty(mode, channel);
+    ESP_ERROR_CHECK(ledc_set_duty(mode, channel, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(mode, channel));
     vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
   void play_music(enum Music music) {

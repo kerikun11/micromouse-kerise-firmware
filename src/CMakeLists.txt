@@ -6,7 +6,7 @@ idf_component_register(SRCS ${GLOBED_SRCS})
 
 # c.f. gcc warnings: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 component_compile_options(
-  -std=gnu++14 # for use of freertos macro
+  -std=gnu++17 # for use of freertos macro
   # -fconcepts # for use of 'auto' in parameter declaration
   -Wall # This enables all the warnings about constructions that some users consider questionable, and that are easy to avoid (or modify to prevent the warning), even in conjunction with macros. 
   -Wextra # This enables some extra warning flags that are not enabled by -Wall. 

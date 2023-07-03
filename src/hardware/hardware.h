@@ -43,7 +43,7 @@ class Hardware {
 
     /* Buzzer (initialize first to notify errors by sound) */
     bz = Buzzer::get_instance();
-    bz->init(BUZZER_PIN, BUZZER_LEDC_CHANNEL, BUZZER_LEDC_TIMER);
+    bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
     /* Button */
     btn = new Button();
     btn->init(BUTTON_PIN);
@@ -82,10 +82,10 @@ class Hardware {
     tof = new ToF();
     if (!tof->init(I2C_PORT_NUM_TOF)) bz->play(hardware::Buzzer::ERROR);
     /* Motor */
-    mt = new Motor(MOTOR_L_CTRL1_PIN, MOTOR_L_CTRL2_PIN, MOTOR_R_CTRL1_PIN,
-                   MOTOR_R_CTRL2_PIN);
+    mt = new Motor(MOTOR_MCPWM_GROUP_ID, MOTOR_L_CTRL1_PIN, MOTOR_L_CTRL2_PIN,
+                   MOTOR_R_CTRL1_PIN, MOTOR_R_CTRL2_PIN);
     /* Fan */
-    fan = new Fan(FAN_PIN);
+    fan = new Fan(FAN_PIN, FAN_LEDC_TIMER, FAN_LEDC_CHANNEL);
 
     /* Ending */
     return true;

@@ -63,10 +63,11 @@ class Machine {
       case 13:
         // Machine::encoder_test();
         // Machine::accel_test();
-        Machine::front_wall_attach_test();
+        // Machine::front_wall_attach_test();
         // Machine::position_recovery();
         // Machine::sysid();
         // Machine::wall_test();
+        Machine::motor_test();
         break;
       case 14: /* テスト */
         Machine::slalom_test();
@@ -195,7 +196,7 @@ class Machine {
   }
   void selectFanGain() {
     /* 吸引ファンの設定であることをお知らせ */
-    hw->fan->drive(0.5f);
+    hw->fan->drive(0.2f);
     vTaskDelay(pdMS_TO_TICKS(100));
     hw->fan->drive(0);
     /* 設定値の取得 */
@@ -792,7 +793,7 @@ class Machine {
     /* check chip */
     if (!check_chip()) {
       auto* bz = hardware::Buzzer::get_instance();
-      bz->init(BUZZER_PIN, BUZZER_LEDC_CHANNEL, BUZZER_LEDC_TIMER);
+      bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
       bz->play(hardware::Buzzer::TIMEOUT);
       return false;
     }

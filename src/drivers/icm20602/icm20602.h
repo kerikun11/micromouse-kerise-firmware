@@ -46,7 +46,7 @@ class ICM20602 {
  public:
   bool init(spi_host_device_t spi_host, int8_t pin_cs) {
     // ESP-IDF SPI device initialization
-    static spi_device_interface_config_t dev_cfg = {
+    spi_device_interface_config_t dev_cfg = {
         .command_bits = 0,
         .address_bits = 8,
         .dummy_bits = 0,

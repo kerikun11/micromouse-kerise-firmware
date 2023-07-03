@@ -21,7 +21,7 @@ void app_devkit() {
 
 #if 1
   auto* bz = hardware::Buzzer::get_instance();
-  bz->init(BUZZER_PIN, BUZZER_LEDC_CHANNEL, BUZZER_LEDC_TIMER);
+  bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
   bz->play(hardware::Buzzer::BOOT);
 #endif
 

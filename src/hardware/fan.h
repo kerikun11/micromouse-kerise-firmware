@@ -15,7 +15,7 @@ class Fan {
  public:
   Fan(gpio_num_t gpio_num, ledc_timer_t timer, ledc_channel_t channel)
       : timer(timer), channel(channel) {
-    const uint32_t freq = 100'000;
+    const uint32_t freq = 250'000;
     const ledc_timer_bit_t duty_resolution = LEDC_TIMER_6_BIT;
     duty_max = (2 << duty_resolution) - 1;
     // LEDC Timer
@@ -42,6 +42,10 @@ class Fan {
     };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
   }
+  /**
+   * @brief drive pwm
+   * @param duty duty ratio in [0, 1]
+   */
   void drive(float duty) {
     uint32_t duty_cycles = duty * duty_max;
     duty_cycles = std::clamp(duty_cycles, static_cast<uint32_t>(0), duty_max);

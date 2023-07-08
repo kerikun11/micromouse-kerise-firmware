@@ -95,11 +95,6 @@ class OneMotor {
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparators[1], 0));
   }
   void drive(float duty) {
-    if (!std::isfinite(duty)) {
-      std::cerr << __FILE__ ":" << __LINE__ << " duty: " << duty << std::endl;
-      free();
-      return;
-    }
     uint32_t duty_cycles = std::abs(duty) * pwm_ticks;
     duty_cycles = std::min(duty_cycles, pwm_ticks);
     if (duty > 0) {
@@ -118,7 +113,7 @@ class OneMotor {
  private:
   uint32_t pwm_ticks;
   mcpwm_cmpr_handle_t comparators[2] = {};
-};  // namespace hardware
+};
 
 class Motor {
  private:
@@ -128,9 +123,12 @@ class Motor {
   Motor(int mcpwm_group_id, gpio_num_t gpio_L1, gpio_num_t gpio_L2,
         gpio_num_t gpio_R1, gpio_num_t gpio_R2)
       : mt_L(mcpwm_group_id, gpio_L1, gpio_L2),
-        mt_R(mcpwm_group_id, gpio_R1, gpio_R2) {
-    free();
-  }
+        mt_R(mcpwm_group_id, gpio_R1, gpio_R2) {}
+  /**
+   * @brief set pwm value
+   * @param valueL L duty ratio in [-1, 1]
+   * @param valueR R duty ratio in [-1, 1]
+   */
   void drive(float valueL, float valueR) {
     if (emergency) return;
     mt_L.drive(valueL);

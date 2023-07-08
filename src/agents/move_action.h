@@ -100,7 +100,7 @@ class MoveAction {
     float v_search = 330;
     float v_unknown_accel = 600;
     /* fast run */
-    float fan_duty = 0.4f;
+    float fan_duty = 0.3f;
 
    public:
     // [1*1.05**i for i in range(0, 4)]: [1.0, 1.05, 1.1025, 1.1576]

@@ -54,23 +54,23 @@ class Machine {
       case 10: /* 迷路情報の表示 */
         mr->print();
         break;
-      case 11: /* プチコン */
-        Machine::petit_con();
-        break;
-      case 12: /* タイヤ径の測定 */
+      case 11: /* タイヤ径の測定 */
         Machine::wheel_diameter_measurement();
         break;
+      case 12: /* システム同定 */
+        Machine::sysid();
+        break;
       case 13:
+        Machine::slalom_test();
+        break;
+      case 14:
+        // Machine::petit_con();
         // Machine::encoder_test();
         // Machine::accel_test();
         // Machine::front_wall_attach_test();
         // Machine::position_recovery();
-        // Machine::sysid();
         // Machine::wall_test();
         Machine::motor_test();
-        break;
-      case 14: /* テスト */
-        Machine::slalom_test();
         break;
       case 15: /* ログの表示 */
         lgr->print();
@@ -458,7 +458,7 @@ class Machine {
     };
     hw->bz->play(hardware::Buzzer::CALIBRATION);
     hw->imu->calibration();
-    hw->fan->drive(0.5);
+    // hw->fan->drive(0.5);
     vTaskDelay(pdMS_TO_TICKS(500));
     /* start */
     if (dir == 1)

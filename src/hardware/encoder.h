@@ -25,12 +25,12 @@ class Encoder {
   Encoder() {}
   bool init(spi_host_device_t spi_host,
             std::array<gpio_num_t, ENCODER_NUM> pins_cs) {
-#if KERISE_SELECT == 4 || KERISE_SELECT == 3
+#if KERISE_SELECT == 3 || KERISE_SELECT == 4
     if (!as.init(spi_host, pins_cs[0])) {
       APP_LOGE("AS5048A init failed :(");
       return false;
     }
-#elif KERISE_SELECT == 5
+#elif KERISE_SELECT == 5 || KERISE_SELECT == 6
     if (!ma[0].init(spi_host, pins_cs[0])) {
       APP_LOGE("MA730 L init failed :(");
       return false;
@@ -70,7 +70,7 @@ class Encoder {
  private:
 #if KERISE_SELECT == 3 || KERISE_SELECT == 4
   AS5048A_DUAL as;
-#elif KERISE_SELECT == 5
+#elif KERISE_SELECT == 5 || KERISE_SELECT == 6
   MA730 ma[2];
 #endif
   int pulses[2] = {};
@@ -96,7 +96,7 @@ class Encoder {
     constexpr int pulses_size = AS5048A_DUAL::PULSES_SIZE;
     as.update();
     for (int i = 0; i < 2; i++) pulses_raw[i] = as.get(i);
-#elif KERISE_SELECT == 5
+#elif KERISE_SELECT == 5 || KERISE_SELECT == 6
     constexpr int pulses_size = MA730::PULSES_SIZE;
     for (int i = 0; i < 2; i++) {
       ma[i].update();
@@ -136,7 +136,7 @@ class Encoder {
 #if KERISE_SELECT == 3 || KERISE_SELECT == 4
     positions[0] = +mm[0];
     positions[1] = -mm[1];
-#elif KERISE_SELECT == 5
+#elif KERISE_SELECT == 5 || KERISE_SELECT == 6
     positions[0] = -mm[0];
     positions[1] = +mm[1];
 #endif

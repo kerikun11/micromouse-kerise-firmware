@@ -23,7 +23,7 @@ class IMU {
  public:
   static constexpr float Ts = 1e-3f;
 
-#if KERISE_SELECT == 4 || KERISE_SELECT == 3
+#if KERISE_SELECT == 3 || KERISE_SELECT == 4 || KERISE_SELECT == 6
   static constexpr float IMU_ROTATION_RADIUS = 10.0f;
   static constexpr int IMU_NUM = 2;
 #elif KERISE_SELECT == 5
@@ -32,23 +32,24 @@ class IMU {
 
  public:
   IMU() {}
-  bool init(spi_host_device_t spi_host, std::array<int8_t, IMU_NUM> pins_cs) {
+  int init(spi_host_device_t spi_host, std::array<int8_t, IMU_NUM> pins_cs) {
+    int ret = 0;
     for (int i = 0; i < IMU_NUM; ++i) {
-      if (!icm[i].init(spi_host, pins_cs[i])) {
+      if (icm[i].init(spi_host, pins_cs[i])) {
         APP_LOGE("IMU[%d] init failed :(", i);
-        return false;
+        ret += 1 << i;
       }
     }
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "IMU",
         4096, this, TASK_PRIORITY_IMU, NULL, TASK_CORE_ID_IMU);
-    return true;
+    return ret;  //< 0: OK, otherwise: NG
   }
   void calibration() {
-    calib_req = true;
-    /* 終了まで待つ */
-    std::unique_lock<std::mutex> unique_lock(calib_mutex);
-    calib_cv.wait(unique_lock, [&] { return !calib_req; });
+    calibration_req = true;
+    /* wait for end calibration */
+    std::unique_lock<std::mutex> unique_lock(calibration_mutex);
+    calibration_cv.wait(unique_lock, [&] { return !calibration_req; });
   }
   void sampling_sync(TickType_t xBlockTime = portMAX_DELAY) const {
     sampling_end_semaphore.take(xBlockTime);
@@ -93,9 +94,9 @@ class IMU {
   freertospp::Semaphore sampling_end_semaphore;
   MotionParameter gyro_offset, accel_offset;
 
-  bool calib_req = false;
-  std::mutex calib_mutex;
-  std::condition_variable calib_cv;
+  bool calibration_req = false;
+  std::mutex calibration_mutex;
+  std::condition_variable calibration_cv;
 
   void task() {
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -107,11 +108,11 @@ class IMU {
       /* notify */
       sampling_end_semaphore.give();
       /* calibration */
-      if (calib_req) {
+      if (calibration_req) {
         task_calibration(xLastWakeTime);
-        std::lock_guard<std::mutex> lock_guard(calib_mutex);
-        calib_req = false;
-        calib_cv.notify_all();
+        std::lock_guard<std::mutex> lock_guard(calibration_mutex);
+        calibration_req = false;
+        calibration_cv.notify_all();
       }
     }
   }
@@ -136,7 +137,7 @@ class IMU {
     for (size_t i = 0; i < IMU_NUM; i++) icm[i].update();
 
     std::lock_guard<std::mutex> lock_guard(mutex);
-#if KERISE_SELECT == 4 || KERISE_SELECT == 3
+#if KERISE_SELECT == 3 || KERISE_SELECT == 4 || KERISE_SELECT == 6
 #if 1
     gyro.x = (-icm[0].gyro.x + icm[1].gyro.x) / 2;
     gyro.y = (-icm[0].gyro.y + icm[1].gyro.y) / 2;
@@ -176,7 +177,7 @@ class IMU {
     gyro -= gyro_offset;
     accel -= accel_offset;
 
-#if KERISE_SELECT == 4 || KERISE_SELECT == 3
+#if KERISE_SELECT == 3 || KERISE_SELECT == 4 || KERISE_SELECT == 6
     angle += gyro.z * Ts;
     angular_accel = (icm[0].accel.y + icm[1].accel.y) / 2 / IMU_ROTATION_RADIUS;
 #elif KERISE_SELECT == 5

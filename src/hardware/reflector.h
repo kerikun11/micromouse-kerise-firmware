@@ -47,10 +47,10 @@ class Reflector {
   int16_t side(uint8_t isRight) const { return read(isRight ? 1 : 0); }
   int16_t front(uint8_t isRight) const { return read(isRight ? 3 : 2); }
   int16_t read(const int8_t ch) const { return value[ch]; }
-  void csv() const {
-    std::cout << "0,2000,4000,";
-    for (int8_t i = 0; i < NUM_CHANNELS; i++) std::cout << "," << read(i);
-    std::cout << std::endl;
+  void csv(std::ostream& out = std::cout) const {
+    out << "0\t2000\t4000\t";
+    for (int8_t i = 0; i < NUM_CHANNELS; i++) out << "\t" << read(i);
+    out << std::endl;
   }
   void print() const {
     APP_LOGI("Reflector: %4d %4d %4d %4d", read(0), read(1), read(2), read(3));

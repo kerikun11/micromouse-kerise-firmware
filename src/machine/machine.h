@@ -812,11 +812,7 @@ class Machine {
     task_drive.start(this, &Machine::drive, "Drive", 4096, 2, tskNO_AFFINITY);
     task_print.start(this, &Machine::print, "Print", 4096, 1, tskNO_AFFINITY);
     /* Ending */
-    if (!result) {
-      hw->bz->play(hardware::Buzzer::ERROR);
-      return false;
-    }
-    return true;
+    return result;
   }
   void drive() {
     // driveAutomatically();

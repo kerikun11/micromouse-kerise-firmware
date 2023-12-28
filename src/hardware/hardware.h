@@ -69,7 +69,7 @@ class Hardware {
       bz->play(hardware::Buzzer::ERROR);
     /* IMU */
     imu = new IMU();
-    if (!imu->init(ICM20602_SPI_HOST, ICM20602_CS_PINS))
+    if (imu->init(ICM20602_SPI_HOST, ICM20602_CS_PINS))
       bz->play(hardware::Buzzer::ERROR);
     /* Encoder */
     enc = new Encoder();

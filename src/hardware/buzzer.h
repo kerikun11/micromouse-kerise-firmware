@@ -7,12 +7,13 @@
  */
 #pragma once
 
-#include <config/config.h>
 #include <driver/ledc.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
+
+#include "config/config.h"
 
 namespace hardware {
 

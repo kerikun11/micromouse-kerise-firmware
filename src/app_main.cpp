@@ -20,6 +20,7 @@ extern "C" void app_main() {
     case 0x080C'401D'A0D8:  //< KERISE v4
     case 0x807F'631D'A0D8:  //< KERISE v4 Copy
     case 0xD866'5A1D'A0D8:  //< KERISE v5
+    case 0xECDC'E8AC'CD98:  //< KERISE v6
       app_mouse();
       vTaskDelay(portMAX_DELAY);
       break;

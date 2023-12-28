@@ -9,10 +9,11 @@
 
 #include <ctrl/accumulator.h>
 #include <drivers/vl6180x/VL6180X.h>
-#include <esp_log.h>
 #include <peripheral/i2c.h>
 
 #include <cstdio>
+
+#include "app_log.h"
 
 namespace hardware {
 
@@ -26,17 +27,17 @@ class ToF {
     /* [pre-cal] fixed 3.2ms */
     vl6180x->configureDefault();
     /* [readout average; 1300us + 64.5us * value] default: 48 (4.3ms) */
-    // vl6180x->writeReg(VL6180X::READOUT__AVERAGING_SAMPLE_PERIOD, 32);
-    // //< 3.2ms vl6180x->writeReg(VL6180X::READOUT__AVERAGING_SAMPLE_PERIOD,
-    // 64); //< 5.4ms
+    // vl6180x->writeReg(VL6180X::READOUT__AVERAGING_SAMPLE_PERIOD,32);//< 3.2ms
+    // vl6180x->writeReg(VL6180X::READOUT__AVERAGING_SAMPLE_PERIOD,64);//< 5.4ms
     /* [max-convergence; includes readout average time] default: 49ms */
-    vl6180x->writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 32);
+    vl6180x->writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME,
+                      model::vl6180x_max_convergence_time);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "ToF",
         4096, this, TASK_PRIORITY_TOF, NULL, TASK_CORE_ID_TOF);
     vTaskDelay(pdMS_TO_TICKS(40));
     if (vl6180x->last_status != 0) {
-      ESP_LOGE(TAG, "ToF init failed :(");
+      APP_LOGE("ToF init failed :(");
       return false;
     }
     return true;
@@ -49,7 +50,7 @@ class ToF {
   bool isValid() const { return passed_ms < 20; }
   const auto& getLog() const { return log; }
   void print() const {
-    ESP_LOGI(TAG, "range: %3d [mm] D: %3d [mm] Dur: %3d [ms], Passed: %4d [ms]",
+    APP_LOGI("range: %3d [mm] D: %3d [mm] Dur: %3d [ms], Passed: %4d [ms]",
              range, distance, dur, passed_ms);
   }
   void csv() const {
@@ -57,7 +58,6 @@ class ToF {
   }
 
  private:
-  static constexpr const char* TAG = "ToF";
   VL6180X* vl6180x;
   bool enabled = true;
   uint16_t distance;

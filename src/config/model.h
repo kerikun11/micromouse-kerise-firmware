@@ -24,9 +24,53 @@ static constexpr float WallThickness = 6.0f;
 
 namespace model {
 
-#define KERISE_SELECT 5
+/* KERISE Select */
+#define KERISE_SELECT 6
 
-#if KERISE_SELECT == 5
+#if KERISE_SELECT == 6
+/* KERISE v6 */
+static constexpr uint64_t MAC_ID = 0xECDC'E8AC'CD98;  //< efuse 48 bit MAC
+/* Machine Size Parameter */
+static constexpr float RotationRadius = 29.0f / 2;
+static constexpr float GearRatio = 1.0f;
+static constexpr float WheelDiameter = 12.72f;  //< 径を大きく：進行距離を短く
+static constexpr float CenterOffsetY = 0.0f;
+static constexpr float TailLength = 13.0f;
+/* ToF */
+static constexpr float tof_raw_range_90 = 75;
+static constexpr float tof_raw_range_180 = 160;
+static constexpr float wall_fix_offset = -5;  //< 大きく: 前壁に近く
+static constexpr float vl6180x_max_convergence_time = 32;  //< ms
+/* Reflector */
+static constexpr float front_wall_attach_gain = 30.0f;
+static constexpr float front_wall_attach_end = 0.4f;
+static constexpr float wall_avoid_alpha = 0.05f;
+static constexpr float wall_fix_theta_gain = 1e-8f;
+static constexpr float wall_comb_threshold = 54;
+/* Model */
+static constexpr ctrl::FeedbackController<ctrl::Polar>::Model
+    SpeedControllerModel = {
+        .K1 = ctrl::Polar(4000, 80),
+        .T1 = ctrl::Polar(0.14, 0.08),
+};
+static constexpr ctrl::FeedbackController<ctrl::Polar>::Gain
+    SpeedControllerGain = {
+        .Kp = ctrl::Polar(0.001, 0.07),
+        .Ki = ctrl::Polar(0.04, 4.0),
+        .Kd = ctrl::Polar(0.0, 0.0),
+};
+static constexpr float turn_back_gain = 10.0f;
+/* Velocity Estimation IIR Filter gain */
+static constexpr ctrl::Polar velocity_filter_alpha = ctrl::Polar(1.0f, 1.0f);
+/* Trajectory Tracking Gain */
+static constexpr ctrl::TrajectoryTracker::Gain TrajectoryTrackerGain = {
+    .zeta = 0.8f,
+    .omega_n = 8.0f,
+    .low_zeta = 0.5f,
+    .low_b = 1e-2f,
+};
+
+#elif KERISE_SELECT == 5
 /* KERISE v5 */
 static constexpr uint64_t MAC_ID = 0xD866'5A1D'A0D8;  //< efuse 48 bit MAC
 /* Machine Size Parameter */
@@ -39,6 +83,7 @@ static constexpr float TailLength = 13.0f;
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
+static constexpr float vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.4f;
@@ -81,6 +126,7 @@ static constexpr float TailLength = 16.4f;
 static constexpr float tof_raw_range_90 = 69;
 static constexpr float tof_raw_range_180 = 154;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
+static constexpr float vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.1f;
@@ -123,6 +169,7 @@ static constexpr float TailLength = 16.4f;
 static constexpr float tof_raw_range_90 = 69;
 static constexpr float tof_raw_range_180 = 154;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
+static constexpr float vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.1f;

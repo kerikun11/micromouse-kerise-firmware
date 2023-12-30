@@ -10,6 +10,7 @@
 #include <soc/rtc.h>
 
 #include "agents/maze_robot.h"
+#include "config/config.h"
 #include "freertospp/task.h"
 #include "peripheral/esp.h"
 #include "peripheral/spiffs.h"
@@ -815,7 +816,9 @@ class Machine {
     return result;
   }
   void drive() {
-    // driveAutomatically();
+#if MACHINE_DRIVE_AUTO_ENABLED
+    driveAutomatically();
+#endif
     while (1) driveManually();
     vTaskDelay(portMAX_DELAY);
   }

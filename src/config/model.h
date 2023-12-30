@@ -24,9 +24,6 @@ static constexpr float WallThickness = 6.0f;
 
 namespace model {
 
-/* KERISE Select */
-#define KERISE_SELECT 6
-
 #if KERISE_SELECT == 6
 /* KERISE v6 */
 static constexpr uint64_t MAC_ID = 0xECDC'E8AC'CD98;  //< efuse 48 bit MAC

@@ -7,6 +7,12 @@
  */
 #pragma once
 
+/* KERISE Select */
+#define KERISE_SELECT 6
+
+/* Drive Mode */
+#define MACHINE_DRIVE_AUTO_ENABLED 0
+
 /* Log Target */
 #define APP_LOG_MEM_MODE 0
 

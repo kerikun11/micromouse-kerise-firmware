@@ -19,9 +19,9 @@ class LED {
   static constexpr uint8_t PCA9632_DEV_ID = 0x62;  //< 全体制御用のI2Cアドレス
 
  public:
-  LED() { playList = xQueueCreate(/* uxQueueLength = */ 5, sizeof(uint8_t)); }
+  LED() { play_list_ = xQueueCreate(/* uxQueueLength = */ 5, sizeof(uint8_t)); }
   bool init(i2c_port_t i2c_port) {
-    this->i2c_port = i2c_port;
+    i2c_port_ = i2c_port;
     writeReg(0x00, 0b10000001);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "LED",
@@ -29,36 +29,36 @@ class LED {
     return true;
   }
   uint8_t set(uint8_t new_value) {
-    value = new_value;
-    xQueueSendToBack(playList, &value, 0);
-    return value;
+    value_ = new_value;
+    xQueueSendToBack(play_list_, &value_, 0);
+    return value_;
   }
-  uint8_t get() const { return value; }
-  operator uint8_t() const { return value; }
+  uint8_t get() const { return value_; }
   uint8_t operator=(uint8_t new_value) { return set(new_value); }
+  operator uint8_t() const { return get(); }
 
  private:
-  i2c_port_t i2c_port;
-  QueueHandle_t playList;
-  uint8_t value;
+  i2c_port_t i2c_port_;
+  QueueHandle_t play_list_;
+  uint8_t value_;
 
   void task() {
     while (1) {
-      uint8_t value;
-      if (xQueueReceive(playList, &value, portMAX_DELAY) == pdTRUE)
-        writeValue(value);
+      uint8_t value_;
+      if (xQueueReceive(play_list_, &value_, portMAX_DELAY) == pdTRUE)
+        writeValue(value_);
     }
   }
-  bool writeValue(uint8_t value) {
+  bool writeValue(uint8_t value_) {
     uint8_t data = 0;
-    data |= (value & 1) << 0;
-    data |= (value & 2) << 1;
-    data |= (value & 4) << 2;
-    data |= (value & 8) << 3;
+    data |= (value_ & 1) << 0;
+    data |= (value_ & 2) << 1;
+    data |= (value_ & 4) << 2;
+    data |= (value_ & 8) << 3;
     return writeReg(0x08, data);
   }
   bool writeReg(uint8_t reg, uint8_t data) {
-    return peripheral::I2C::writeReg8(i2c_port, PCA9632_DEV_ID, reg, &data, 1,
+    return peripheral::I2C::writeReg8(i2c_port_, PCA9632_DEV_ID, reg, &data, 1,
                                       pdMS_TO_TICKS(10));
   }
 };

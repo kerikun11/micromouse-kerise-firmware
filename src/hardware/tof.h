@@ -19,9 +19,18 @@ namespace hardware {
 
 class ToF {
  public:
+  struct Parameter {
+    i2c_port_t i2c_port;
+    uint8_t max_convergence_time_ms = 49;
+    float reference_range_90mm = 90;
+    float reference_range_180mm = 180;
+  };
+
+ public:
   ToF() {}
-  bool init(i2c_port_t i2c_port) {
-    vl6180x = new VL6180X(i2c_port);
+  bool init(const Parameter& param) {
+    param_ = param;
+    vl6180x = new VL6180X(param_.i2c_port);
     vl6180x->setTimeout(20);
     vl6180x->init();
     /* [pre-cal] fixed 3.2ms */
@@ -31,7 +40,7 @@ class ToF {
     // vl6180x->writeReg(VL6180X::READOUT__AVERAGING_SAMPLE_PERIOD,64);//< 5.4ms
     /* [max-convergence; includes readout average time] default: 49ms */
     vl6180x->writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME,
-                      model::vl6180x_max_convergence_time);
+                      param_.max_convergence_time_ms);
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "ToF",
         4096, this, TASK_PRIORITY_TOF, NULL, TASK_CORE_ID_TOF);
@@ -59,6 +68,7 @@ class ToF {
 
  private:
   VL6180X* vl6180x;
+  Parameter param_;
   bool enabled = true;
   uint16_t distance;
   uint16_t range;
@@ -90,8 +100,8 @@ class ToF {
       }
       /* get data from sensor */
       range = vl6180x->readReg(VL6180X::RESULT__RANGE_VAL);
-      const auto r90 = model::tof_raw_range_90;
-      const auto r180 = model::tof_raw_range_180;
+      const auto r90 = param_.reference_range_90mm;
+      const auto r180 = param_.reference_range_180mm;
       /* line equation: y-y1 = (y2-y1) / (x2-x1) * (x-x1) */
       /* 2 point: (x1, y1) = (r90, 90), (x2, y2) = (r180, 180) */
       distance = (180.0f - 90.0f) / (r180 - r90) * (range - r90) + 90;

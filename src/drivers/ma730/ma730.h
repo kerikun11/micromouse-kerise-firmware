@@ -7,8 +7,11 @@
  */
 #pragma once
 
+#include <driver/gpio.h>
 #include <driver/spi_master.h>
 #include <esp_err.h>
+
+namespace drivers {
 
 class MA730 {
  public:
@@ -48,39 +51,41 @@ class MA730 {
               ESP_ERROR_CHECK(gpio_set_level(this_ptr->pin_cs_, 1));
             },
     };
-    ESP_ERROR_CHECK(spi_bus_add_device(spi_host, &dev_cfg, &encoder_spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(spi_host, &dev_cfg, &spi_handle));
     return update() && check();
   }
   bool update() {
     /* transaction */
-    static spi_transaction_t tx;
+    spi_transaction_t tx{};  //< zero initialization
     tx.user = this;
     tx.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
     tx.tx_data[0] = tx.tx_data[1] = 0x00;
     tx.length = 16;
-    ESP_ERROR_CHECK(spi_device_transmit(encoder_spi, &tx));
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &tx));
     /* data parse */
     pulses = uint16_t(tx.rx_data[0] << 6) | (tx.rx_data[1] >> 2);
     return true;
   }
   bool check() {
     /* transaction */
-    static spi_transaction_t tx;
+    spi_transaction_t tx{};  //< zero initialization
     tx.user = this;
     tx.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
     tx.tx_data[0] = 0b010'00110;  // 0b00110: MGLT(2:0) MGHT(2:0) Reserved (1:0)
     tx.tx_data[1] = 0x00;
     tx.length = 16;
-    ESP_ERROR_CHECK(spi_device_transmit(encoder_spi, &tx));
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &tx));
     tx.tx_data[0] = tx.tx_data[1] = 0x00;
-    ESP_ERROR_CHECK(spi_device_transmit(encoder_spi, &tx));
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &tx));
     /* data parse */
     return tx.rx_data[0] == 0x1C;
   }
   int get() const { return pulses; }
 
  private:
-  spi_device_handle_t encoder_spi = NULL;
+  spi_device_handle_t spi_handle = NULL;
   gpio_num_t pin_cs_ = GPIO_NUM_NC;
   int pulses;
 };
+
+};  // namespace drivers

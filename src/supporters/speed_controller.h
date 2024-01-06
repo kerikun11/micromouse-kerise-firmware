@@ -31,14 +31,10 @@ class SpeedController {
   WheelParameter enc_v;
   ctrl::Accumulator<float, acc_num> wheel_position[2];
   ctrl::Accumulator<ctrl::Polar, acc_num> accel;
-  ctrl::FeedbackController<ctrl::Polar> fbc;
-
- private:
-  hardware::Hardware* hw;
 
  public:
   SpeedController(hardware::Hardware* hw)
-      : fbc(model::SpeedControllerModel, model::SpeedControllerGain), hw(hw) {
+      : hw(hw), fbc(model::SpeedControllerModel, model::SpeedControllerGain) {
     reset();
   }
   bool init() {
@@ -50,7 +46,7 @@ class SpeedController {
   }
   void reset() {
     {
-      std::lock_guard<std::mutex> lock_guard(mutex);
+      std::lock_guard<std::mutex> lock_guard(mutex_);
       ref_v.clear();
       ref_a.clear();
       est_v.clear();
@@ -66,21 +62,25 @@ class SpeedController {
   }
   void enable() {
     reset();
-    drive_enabled = true;
+    drive_enabled_ = true;
   }
   void disable() {
-    std::lock_guard<std::mutex> lock_guard(mutex);
-    drive_enabled = false;
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    drive_enabled_ = false;
     hw->mt->free();
     hw->fan->drive(0);
   }
   void set_target(float v_tra, float v_rot, float a_tra = 0, float a_rot = 0) {
-    std::lock_guard<std::mutex> lock_guard(mutex);
+    std::lock_guard<std::mutex> lock_guard(mutex_);
     ref_v.tra = v_tra, ref_v.rot = v_rot, ref_a.tra = a_tra, ref_a.rot = a_rot;
-    if (drive_enabled) drive();
+    if (drive_enabled_) drive();
+  }
+  void update_pose(const ctrl::Pose& new_pose) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    est_p = new_pose;
   }
   void fix_pose(ctrl::Pose fix, bool force = true) {
-    std::lock_guard<std::mutex> lock_guard(mutex);
+    std::lock_guard<std::mutex> lock_guard(mutex_);
     if (!force) {
       const float max_fix = 1.0f;  //< 補正量の飽和 [mm]
       fix.x = std::max(std::min(fix.x, max_fix), -max_fix);
@@ -88,18 +88,19 @@ class SpeedController {
     }
     est_p += fix;
   }
-  void update_pose(const ctrl::Pose& new_pose) {
-    std::lock_guard<std::mutex> lock_guard(mutex);
-    est_p = new_pose;
-  }
   void sampling_sync() const {  //
-    data_ready_semaphore.take();
+    data_ready_semaphore_.take();
+  }
+  const ctrl::FeedbackController<ctrl::Polar>& getFeedbackController() const {
+    return fbc;
   }
 
  private:
-  bool drive_enabled = false;
-  freertospp::Semaphore data_ready_semaphore;
-  std::mutex mutex;
+  hardware::Hardware* hw;
+  ctrl::FeedbackController<ctrl::Polar> fbc;
+  bool drive_enabled_ = false;
+  freertospp::Semaphore data_ready_semaphore_;
+  std::mutex mutex_;
 
   void task() {
     while (1) {
@@ -107,20 +108,17 @@ class SpeedController {
       hw->imu->sampling_sync();
       hw->enc->sampling_sync();
       /* lock data */
-      std::lock_guard<std::mutex> lock_guard(mutex);
+      std::lock_guard<std::mutex> lock_guard(mutex_);
       /* update data */
       update_samples();
       update_estimator();
       update_odometry();
       /* notify app */
-      data_ready_semaphore.give();
+      data_ready_semaphore_.give();
       /* PID control */
-      if (drive_enabled) drive();
-      /* logging */
-      logging();
+      if (drive_enabled_) drive();
     }
   }
-  void logging() {}
   void update_samples() {
     /* add new samples */
     for (int i = 0; i < 2; i++)

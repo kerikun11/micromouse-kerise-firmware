@@ -40,7 +40,6 @@ class Buzzer {
     SHORT7,
     SHORT8,
     SHORT9,
-    MUSIC_MAX,
   };
 
  public:
@@ -49,13 +48,13 @@ class Buzzer {
     return instance;
   }
   bool init(gpio_num_t gpio_num, ledc_timer_t timer, ledc_channel_t channel) {
-    this->channel = channel;
-    this->timer = timer;
+    channel_ = channel;
+    timer_ = timer;
     // LEDC Timer
     ledc_timer_config_t ledc_timer = {
-        .speed_mode = mode,
+        .speed_mode = mode_,
         .duty_resolution = LEDC_TIMER_8_BIT,
-        .timer_num = timer,
+        .timer_num = timer_,
         .freq_hz = 5000,
         .clk_cfg = LEDC_AUTO_CLK,
     };
@@ -63,10 +62,10 @@ class Buzzer {
     // LEDC Channel
     ledc_channel_config_t ledc_channel = {
         .gpio_num = gpio_num,
-        .speed_mode = mode,
-        .channel = channel,
+        .speed_mode = mode_,
+        .channel = channel_,
         .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = timer,
+        .timer_sel = timer_,
         .duty = 0,
         .hpoint = 0,
         .flags{
@@ -79,21 +78,23 @@ class Buzzer {
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "Buzzer",
         4096, this, TASK_PRIORITY_BUZZER, NULL, TASK_CORE_ID_BUZZER);
     // Ending
-    initialized = true;
+    initialized_ = true;
     return true;
   }
-  bool is_initialized() const { return initialized; }
+  bool is_initialized() const { return initialized_; }
   void play(const enum Music music, TickType_t xTicksToWait = 0) {
-    xQueueSendToBack(playList, &music, xTicksToWait);
+    xQueueSendToBack(play_list_, &music, xTicksToWait);
   }
 
  protected:
   static constexpr const char* TAG = "Buzzer";
-  bool initialized = false;
-  QueueHandle_t playList;
-  ledc_channel_t channel;
-  ledc_timer_t timer;
-  ledc_mode_t mode = LEDC_HIGH_SPEED_MODE;
+  bool initialized_ = false;
+  QueueHandle_t play_list_;
+  ledc_channel_t channel_;
+  ledc_timer_t timer_;
+  ledc_mode_t mode_ = LEDC_HIGH_SPEED_MODE;
+
+ protected:
   typedef enum {
     NOTE_C,
     NOTE_Cs,
@@ -111,13 +112,13 @@ class Buzzer {
   } note_t;
 
   Buzzer() {
-    playList = xQueueCreate(/* uxQueueLength = */ 10, sizeof(enum Music));
+    play_list_ = xQueueCreate(/* uxQueueLength = */ 10, sizeof(enum Music));
   }
   void task() {
     vTaskDelay(pdMS_TO_TICKS(1));  //< for first note drop bug avoidance
     while (1) {
       enum Music music;
-      xQueueReceive(playList, &music, portMAX_DELAY);
+      xQueueReceive(play_list_, &music, portMAX_DELAY);
       play_music(music);
       mute(0);
     }
@@ -131,18 +132,18 @@ class Buzzer {
       return;
     }
     uint32_t freq = noteFrequencyBase[note] / (1 << (8 - octave));
-    ESP_ERROR_CHECK(ledc_set_freq(mode, timer, freq));
+    ESP_ERROR_CHECK(ledc_set_freq(mode_, timer_, freq));
     ESP_ERROR_CHECK(
-        ledc_set_duty(mode, channel, 4));  //< duty in [0, 2^duty_resolution]
-    ESP_ERROR_CHECK(ledc_update_duty(mode, channel));
+        ledc_set_duty(mode_, channel_, 4));  //< duty in [0, 2^duty_resolution]
+    ESP_ERROR_CHECK(ledc_update_duty(mode_, channel_));
   }
   void note(const note_t note, const uint8_t octave, const uint32_t dur_ms) {
     write_note(note, octave);
     vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
   void mute(uint32_t dur_ms = 200) {
-    ESP_ERROR_CHECK(ledc_set_duty(mode, channel, 0));
-    ESP_ERROR_CHECK(ledc_update_duty(mode, channel));
+    ESP_ERROR_CHECK(ledc_set_duty(mode_, channel_, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(mode_, channel_));
     vTaskDelay(pdMS_TO_TICKS(dur_ms));
   }
   void play_music(enum Music music) {

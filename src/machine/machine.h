@@ -385,7 +385,7 @@ class Machine {
   void log_push(enum LOG_SELECT log_select,
                 const ctrl::Pose& ref_q = ctrl::Pose(),
                 const ctrl::Pose& est_q = ctrl::Pose()) {
-    const auto& bd = sp->sc->fbc.getBreakdown();
+    const auto& bd = sp->sc->getFeedbackController().getBreakdown();
     switch (log_select) {
       case LOG_PID:
         return lgr->push({
@@ -449,7 +449,7 @@ class Machine {
         "battery_voltage",
     });
     const auto push_log = [&]() {
-      const auto& bd = sp->sc->fbc.getBreakdown();
+      const auto& bd = sp->sc->getFeedbackController().getBreakdown();
       lgr->push({
           hw->enc->get_position(0), hw->enc->get_position(1),
           hw->imu->get_gyro(), hw->imu->get_accel(),

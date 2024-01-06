@@ -61,6 +61,7 @@ class UserInterface {
         hw->bz->play(hardware::Buzzer::SELECT);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
       }
+#if 1
       if (now_enc > prev_enc + enc_interval_mm) {
         prev_enc += enc_interval_mm;
         value += 1;
@@ -75,6 +76,7 @@ class UserInterface {
         hw->led->set(value);
         hw->bz->play(hardware::Buzzer::SELECT);
       }
+#endif
       /* CONFIRM */
       if (std::abs(hw->imu->get_accel3().z) > thr_accel) {
         hw->bz->play(hardware::Buzzer::CONFIRM);

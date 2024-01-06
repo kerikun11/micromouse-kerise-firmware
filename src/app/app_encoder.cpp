@@ -1,4 +1,5 @@
 #include "app_log.h"
+#include "hardware/encoder.h"
 #include "machine/machine.h"
 
 void app_encoder() {
@@ -26,8 +27,14 @@ void app_encoder() {
     APP_LOGE("install failed");
   /* Encoder */
   auto* enc = new hardware::Encoder();
-  if (!enc->init(ENCODER_SPI_HOST, ENCODER_CS_PINS))
-    APP_LOGE("enc init failed");
+  hardware::Encoder::Parameter encoder_parameter = {
+      .sensor_type = ENCODER_SENSOR_TYPE,
+      .spi_host = ENCODER_SPI_HOST,
+      .gpio_nums_spi_cs = ENCODER_CS_PINS,
+      .gear_ratio = model::GearRatio,
+      .wheel_diameter = model::WheelDiameter,
+  };
+  if (!enc->init(encoder_parameter)) APP_LOGE("enc init failed");
   /* main */
   while (1) {
     APP_LOGI("%d %d", enc->get_raw(0), enc->get_raw(1));

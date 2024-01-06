@@ -33,11 +33,12 @@ static constexpr float GearRatio = 1.0f;
 static constexpr float WheelDiameter = 12.72f;  //< 径を大きく：進行距離を短く
 static constexpr float CenterOffsetY = 0.0f;
 static constexpr float TailLength = 13.0f;
+static constexpr float IMURotationRadius = 10.0f;
 /* ToF */
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;
 static constexpr float wall_fix_offset = -5;  //< 大きく: 前壁に近く
-static constexpr float vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.4f;
@@ -76,11 +77,12 @@ static constexpr float GearRatio = 1.0f;
 static constexpr float WheelDiameter = 12.72f;  //< 径を大きく：進行距離を短く
 static constexpr float CenterOffsetY = 0.0f;
 static constexpr float TailLength = 13.0f;
+static constexpr float IMURotationRadius = 0.0f;  //< N/A
 /* ToF */
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
-static constexpr float vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.4f;
@@ -119,11 +121,12 @@ static constexpr float GearRatio = (12.0f / 38.0f);
 static constexpr float WheelDiameter = 12.67f;  //< 径を大きく：進行距離を短く
 static constexpr float CenterOffsetY = 8.0f;
 static constexpr float TailLength = 16.4f;
+static constexpr float IMURotationRadius = 10.0f;
 /* ToF */
 static constexpr float tof_raw_range_90 = 69;
 static constexpr float tof_raw_range_180 = 154;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
-static constexpr float vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.1f;
@@ -162,11 +165,12 @@ static constexpr float GearRatio = (12.0f / 38.0f);
 static constexpr float WheelDiameter = 12.96f;  //< 径を大きく：進行距離を短く
 static constexpr float CenterOffsetY = 8.0f;
 static constexpr float TailLength = 16.4f;
+static constexpr float IMURotationRadius = 10.0f;
 /* ToF */
 static constexpr float tof_raw_range_90 = 69;
 static constexpr float tof_raw_range_180 = 154;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
-static constexpr float vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.1f;

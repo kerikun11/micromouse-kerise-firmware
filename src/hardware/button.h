@@ -11,13 +11,15 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "config/config.h"
+
 namespace hardware {
 
 class Button {
  public:
   Button() {}
   bool init(const gpio_num_t pin) {
-    this->pin = pin;
+    pin_ = pin;
     ESP_ERROR_CHECK(gpio_reset_pin(pin));
     ESP_ERROR_CHECK(gpio_set_direction(pin, GPIO_MODE_INPUT));
     ESP_ERROR_CHECK(gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY));
@@ -50,26 +52,26 @@ class Button {
   static constexpr int button_time_long_press_3 = 500;
 
  private:
-  gpio_num_t pin;
-  int counter = 0;
+  gpio_num_t pin_;
+  int counter_ = 0;
 
   void update() {
-    if (gpio_get_level(pin) == 0) {
-      if (counter < button_time_long_press_3 + 1) counter++;
-      if (counter == button_time_long_press_3) long_pressing_3 = 1;
-      if (counter == button_time_long_press_2) long_pressing_2 = 1;
-      if (counter == button_time_long_press_1) long_pressing_1 = 1;
-      if (counter == button_time_press) pressing = 1;
+    if (gpio_get_level(pin_) == 0) {
+      if (counter_ < button_time_long_press_3 + 1) counter_++;
+      if (counter_ == button_time_long_press_3) long_pressing_3 = 1;
+      if (counter_ == button_time_long_press_2) long_pressing_2 = 1;
+      if (counter_ == button_time_long_press_1) long_pressing_1 = 1;
+      if (counter_ == button_time_press) pressing = 1;
     } else {
-      if (counter >= button_time_long_press_3)
+      if (counter_ >= button_time_long_press_3)
         long_pressed_3 = 1;
-      else if (counter >= button_time_long_press_2)
+      else if (counter_ >= button_time_long_press_2)
         long_pressed_2 = 1;
-      else if (counter >= button_time_long_press_1)
+      else if (counter_ >= button_time_long_press_1)
         long_pressed_1 = 1;
-      else if (counter >= button_time_press)
+      else if (counter_ >= button_time_press)
         pressed = 1;
-      counter = 0;
+      counter_ = 0;
       flags &= 0x0F;
     }
   }

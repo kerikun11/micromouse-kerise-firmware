@@ -44,15 +44,18 @@ class Reflector {
         TASK_CORE_ID_REFLECTOR);
     return true;
   }
-  int16_t side(uint8_t isRight) const { return read(isRight ? 1 : 0); }
-  int16_t front(uint8_t isRight) const { return read(isRight ? 3 : 2); }
-  int16_t read(const int8_t ch) const { return value[ch]; }
-  void csv(std::ostream& out = std::cout) const {
+  int16_t side(uint8_t isRight) { return read(isRight ? 1 : 0); }
+  int16_t front(uint8_t isRight) { return read(isRight ? 3 : 2); }
+  int16_t read(const int8_t ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return value[ch];
+  }
+  void csv(std::ostream& out = std::cout) {
     out << "0\t2000\t4000\t";
     for (int8_t i = 0; i < NUM_CHANNELS; i++) out << "\t" << read(i);
     out << std::endl;
   }
-  void print() const {
+  void print() {
     APP_LOGI("Reflector: %4d %4d %4d %4d", read(0), read(1), read(2), read(3));
   }
 
@@ -61,6 +64,7 @@ class Reflector {
   const std::array<adc_channel_t, NUM_CHANNELS>
       rx_channels;  //< フォトトランジスタのADC1_CHANNEL
   std::array<int16_t, NUM_CHANNELS> value;  //< リフレクタの測定値
+  std::mutex mutex_;                        //< value用のMutex
   TimerSemaphore ts;  //< インターバル用タイマー
   ctrl::Accumulator<int, ave_num> buffer[NUM_CHANNELS];  //< 平均計算用
 
@@ -76,7 +80,8 @@ class Reflector {
       // Calculation
       int diff = raw - offset;  //< オフセットとの差をとる
       if (diff < 1) diff = 1;   //< 0以下にならないように1で飽和
-      buffer[i].push(diff);     //< 保存
+      std::lock_guard<std::mutex> lock_guard(mutex_);  //< lock value
+      buffer[i].push(diff);
       value[i] = buffer[i].average();
     }
   }

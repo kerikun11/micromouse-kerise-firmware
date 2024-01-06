@@ -11,6 +11,8 @@
 #include "hardware/imu.h"
 #include "hardware/reflector.h"
 #include "hardware/tof.h"
+/* Config */
+#include "config/io_mapping.h"
 
 namespace hardware {
 
@@ -73,14 +75,26 @@ class Hardware {
       bz->play(hardware::Buzzer::ERROR);
     /* Encoder */
     enc = new Encoder();
-    if (!enc->init(ENCODER_SPI_HOST, ENCODER_CS_PINS))
-      bz->play(hardware::Buzzer::ERROR);
+    Encoder::Parameter encoder_parameter = {
+        .sensor_type = ENCODER_SENSOR_TYPE,
+        .spi_host = ENCODER_SPI_HOST,
+        .gpio_nums_spi_cs = ENCODER_CS_PINS,
+        .gear_ratio = model::GearRatio,
+        .wheel_diameter = model::WheelDiameter,
+    };
+    if (!enc->init(encoder_parameter)) bz->play(hardware::Buzzer::ERROR);
     /* Reflector */
     rfl = new Reflector(REFLECTOR_TX_PINS, REFLECTOR_RX_CHANNELS);
     if (!rfl->init()) bz->play(hardware::Buzzer::ERROR);
     /* ToF */
     tof = new ToF();
-    if (!tof->init(I2C_PORT_NUM_TOF)) bz->play(hardware::Buzzer::ERROR);
+    ToF::Parameter tof_param = {
+        .i2c_port = I2C_PORT_NUM_TOF,
+        .max_convergence_time_ms = model::vl6180x_max_convergence_time,
+        .reference_range_90mm = model::tof_raw_range_90,
+        .reference_range_180mm = model::tof_raw_range_180,
+    };
+    if (!tof->init(tof_param)) bz->play(hardware::Buzzer::ERROR);
     /* Motor */
     mt = new Motor(MOTOR_MCPWM_GROUP_ID, MOTOR_L_CTRL1_PIN, MOTOR_L_CTRL2_PIN,
                    MOTOR_R_CTRL1_PIN, MOTOR_R_CTRL2_PIN);

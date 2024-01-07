@@ -1,3 +1,10 @@
+/**
+ * @file motion_parameter.h
+ * @brief Structure of (x, y, z) Motion Parameter
+ * @author Ryotaro Onuki <kerikun11+github@gmail.com>
+ * @date 2024-01-07
+ * @copyright Copyright 2024 Ryotaro Onuki <kerikun11+github@gmail.com>
+ */
 #pragma once
 
 struct MotionParameter {

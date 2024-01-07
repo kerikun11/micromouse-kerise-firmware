@@ -19,7 +19,7 @@ class Button {
  public:
   Button() {}
   bool init(const gpio_num_t pin) {
-    pin_ = pin;
+    gpio_num_ = pin;
     ESP_ERROR_CHECK(gpio_reset_pin(pin));
     ESP_ERROR_CHECK(gpio_set_direction(pin, GPIO_MODE_INPUT));
     ESP_ERROR_CHECK(gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY));
@@ -52,11 +52,11 @@ class Button {
   static constexpr int button_time_long_press_3 = 500;
 
  private:
-  gpio_num_t pin_;
+  gpio_num_t gpio_num_;
   int counter_ = 0;
 
   void update() {
-    if (gpio_get_level(pin_) == 0) {
+    if (gpio_get_level(gpio_num_) == 0) {
       if (counter_ < button_time_long_press_3 + 1) counter_++;
       if (counter_ == button_time_long_press_3) long_pressing_3 = 1;
       if (counter_ == button_time_long_press_2) long_pressing_2 = 1;

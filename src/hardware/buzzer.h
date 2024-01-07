@@ -43,9 +43,8 @@ class Buzzer {
   };
 
  public:
-  static Buzzer* get_instance() {
-    static Buzzer* instance = new Buzzer();
-    return instance;
+  Buzzer() {
+    play_list_ = xQueueCreate(/* uxQueueLength = */ 10, sizeof(enum Music));
   }
   bool init(gpio_num_t gpio_num, ledc_timer_t timer, ledc_channel_t channel) {
     channel_ = channel;
@@ -111,9 +110,6 @@ class Buzzer {
     NOTE_MAX,
   } note_t;
 
-  Buzzer() {
-    play_list_ = xQueueCreate(/* uxQueueLength = */ 10, sizeof(enum Music));
-  }
   void task() {
     vTaskDelay(pdMS_TO_TICKS(1));  //< for first note drop bug avoidance
     while (1) {

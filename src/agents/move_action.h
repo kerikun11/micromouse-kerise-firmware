@@ -293,7 +293,7 @@ class MoveAction {
         wp.wheel[j] =
             sp->wd->distance_average.front[j] * model::front_wall_attach_gain;
       }
-      wp.wheel2pole();
+      const ctrl::Polar p = wp.toPolar(model::RotationRadius);
       /* 終了条件 */
       const float end = model::front_wall_attach_end;
       if (math_utils::sum_of_square(wp.wheel[0], wp.wheel[1]) < end) {
@@ -303,9 +303,9 @@ class MoveAction {
       /* 制御 */
       const float sat_tra = 180.0f;  //< [mm/s]
       const float sat_rot = PI;      //< [rad/s]
-      sp->sc->set_target(math_utils::saturate(wp.tra, sat_tra),
-                         math_utils::saturate(wp.rot, sat_rot));
-      sp->sc->sampling_sync();
+      sp->sc->set_target(math_utils::saturate(p.tra, sat_tra),
+                         math_utils::saturate(p.rot, sat_rot));
+      sp->sc->sampling_wait();
     }
     hw->bz->play(result ? hardware::Buzzer::SUCCESSFUL
                         : hardware::Buzzer::CANCEL);
@@ -523,7 +523,7 @@ class MoveAction {
           break;  //< 静止の場合を考慮した条件
         /* 前壁制御 */
         if (isAlong() && hw->tof->isValid()) {
-          const float tof_mm = hw->tof->getLog().average(2);
+          const float tof_mm = hw->tof->getDistance();
           /* 衝突被害軽減ブレーキ (AEBS) */
           if (remain > field::SegWidthFull && tof_mm < field::SegWidthFull)
             wall_stop_aebs();
@@ -537,7 +537,7 @@ class MoveAction {
           }
         }
         /* 情報の更新 */
-        sp->sc->sampling_sync();
+        sp->sc->sampling_wait();
         /* 壁補正 */
         hw->led->set(0);
         front_wall_fix(rp);
@@ -567,7 +567,7 @@ class MoveAction {
     ctrl::AccelDesigner ad(dddth_max, ddth_max, dth_max, 0, 0, angle);
     for (float t = 0; t < ad.t_end(); t += sp->sc->Ts) {
       if (is_break_state()) break;
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       const float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                           sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
       sp->sc->set_target(-delta * back_gain, ad.v(t), 0, ad.a(t));
@@ -576,7 +576,7 @@ class MoveAction {
     float int_error = 0;
     while (1) {
       if (is_break_state()) break;
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                     sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
       const float Kp = 10.0f;
@@ -609,7 +609,7 @@ class MoveAction {
     for (float t = 0; t < trajectory.getTimeCurve(); t += Ts) {
       if (is_break_state()) break;
       /* データの更新 */
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       /* 壁補正 */
       hw->led->set(0);
       front_wall_fix(rp);
@@ -671,7 +671,7 @@ class MoveAction {
     hw->bz->play(hardware::Buzzer::AEBS);
     // ToDo: compiler bug avoidance!
     for (float v = sp->sc->ref_v.tra; v > 0; v -= 12) {
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       sp->sc->set_target(v, 0);
     }
     sp->sc->set_target(0, 0);
@@ -686,7 +686,7 @@ class MoveAction {
     hw->mt->drive(-0.2f, -0.2f); /*< 背中を確実に壁につける */
     vTaskDelay(pdMS_TO_TICKS(500));
     hw->mt->free();
-    sp->sc->sampling_sync();
+    sp->sc->sampling_wait();
     sp->sc->enable();  //< this resets est_p
     sp->sc->update_pose({model::TailLength + field::WallThickness / 2});
     offset = ctrl::Pose(field::SegWidthFull / 2, 0, PI / 2);
@@ -765,7 +765,7 @@ class MoveAction {
     tt.reset(v_start);
     for (float t = 0; sa_queue.empty(); t += sp->sc->Ts) {
       if (is_break_state()) break;
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       /* 壁補正 */
       hw->led->set(0);
       front_wall_fix(rp);
@@ -1020,7 +1020,7 @@ class MoveAction {
     int index = 0;
     for (float t = 0; t < ad.t_end(); t += sp->sc->Ts) {
       if (is_break_state()) break;
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       const float delta = sp->sc->est_p.x * std::cos(-sp->sc->est_p.th) -
                           sp->sc->est_p.y * std::sin(-sp->sc->est_p.th);
       constexpr float back_gain = model::turn_back_gain;

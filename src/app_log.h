@@ -9,7 +9,7 @@
 #include <esp_timer.h>  //< esp_timer_get_time
 #include <stdio.h>      //< for printf
 
-#include "config/config.h"  //< for APP_LOG_LEVEL
+#include "config/config.h"  //< for APP_LOG_LEVEL, APP_LOG_MEM_MODE
 
 /* app log mode */
 #ifndef APP_LOG_MEM_MODE

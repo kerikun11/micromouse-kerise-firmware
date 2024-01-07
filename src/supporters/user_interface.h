@@ -28,10 +28,10 @@ class UserInterface {
   static constexpr float thr_gyro_pickup = PI; /**< 回収角速度の閾値 */
 
  private:
-  hardware::Hardware* hw;
+  hardware::Hardware* hw_;
 
  public:
-  UserInterface(hardware::Hardware* hw) : hw(hw) {}
+  UserInterface(hardware::Hardware* hw) : hw_(hw) {}
   /**
    * @brief ユーザーに番号を選択させる
    *
@@ -40,63 +40,64 @@ class UserInterface {
    * @return int -1: キャンセルされた
    */
   int waitForSelect(const int range = 16, const uint8_t init_value = 0) {
-    float prev_enc = hw->enc->get_position(0) + hw->enc->get_position(1);
+    float position_prev = hw_->enc->get_position(0) + hw_->enc->get_position(1);
     uint8_t value = init_value;
-    hw->led->set(value);
+    hw_->led->set(value);
     while (1) {
       vTaskDelay(pdMS_TO_TICKS(1));
-      float now_enc = hw->enc->get_position(0) + hw->enc->get_position(1);
+      float position_now =
+          hw_->enc->get_position(0) + hw_->enc->get_position(1);
       /* SELECT */
-      if (hw->imu->get_gyro3().y > thr_gyro) {
+      if (hw_->imu->get_gyro3().y > thr_gyro) {
         value += range - 1;
         value %= range;
-        hw->led->set(value);
-        hw->bz->play(hardware::Buzzer::SELECT);
+        hw_->led->set(value);
+        hw_->bz->play(hardware::Buzzer::SELECT);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
       }
-      if (hw->imu->get_gyro3().y < -thr_gyro) {
+      if (hw_->imu->get_gyro3().y < -thr_gyro) {
         value += 1;
         value %= range;
-        hw->led->set(value);
-        hw->bz->play(hardware::Buzzer::SELECT);
+        hw_->led->set(value);
+        hw_->bz->play(hardware::Buzzer::SELECT);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
       }
 #if 1
-      if (now_enc > prev_enc + enc_interval_mm) {
-        prev_enc += enc_interval_mm;
+      if (position_now > position_prev + enc_interval_mm) {
+        position_prev += enc_interval_mm;
         value += 1;
         value %= range;
-        hw->led->set(value);
-        hw->bz->play(hardware::Buzzer::SELECT);
+        hw_->led->set(value);
+        hw_->bz->play(hardware::Buzzer::SELECT);
       }
-      if (now_enc < prev_enc - enc_interval_mm) {
-        prev_enc -= enc_interval_mm;
+      if (position_now < position_prev - enc_interval_mm) {
+        position_prev -= enc_interval_mm;
         value += range - 1;
         value %= range;
-        hw->led->set(value);
-        hw->bz->play(hardware::Buzzer::SELECT);
+        hw_->led->set(value);
+        hw_->bz->play(hardware::Buzzer::SELECT);
       }
 #endif
       /* CONFIRM */
-      if (std::abs(hw->imu->get_accel3().z) > thr_accel) {
-        hw->bz->play(hardware::Buzzer::CONFIRM);
+      if (std::abs(hw_->imu->get_accel3().z) > thr_accel) {
+        hw_->bz->play(hardware::Buzzer::CONFIRM);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
         return value;
       }
-      if (hw->btn->pressed) {
-        hw->btn->flags = 0;
-        hw->bz->play(hardware::Buzzer::CONFIRM);
+      if (hw_->btn->pressed) {
+        hw_->btn->flags = 0;
+        hw_->bz->play(hardware::Buzzer::CONFIRM);
         return value;
       }
       /* CANCEL */
-      if (std::abs(hw->imu->get_accel3().x) > thr_accel) {
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (std::abs(hw_->imu->get_accel3().x) > thr_accel) {
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
         return -1;
       }
-      if (hw->btn->long_pressed_1) {
-        hw->btn->flags = 0;
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (hw_->btn->long_pressed_1) {
+        hw_->btn->flags = 0;
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         return -1;
       }
     }
@@ -110,31 +111,31 @@ class UserInterface {
    */
   bool waitForCover(bool side = false) {
     if (side)
-      hw->led->set(9);
+      hw_->led->set(9);
     else
-      hw->led->set(6);
+      hw_->led->set(6);
     while (1) {
       vTaskDelay(pdMS_TO_TICKS(1));
       /* CONFIRM */
-      if (!side && hw->rfl->front(0) > thr_ref_front &&
-          hw->rfl->front(1) > thr_ref_front) {
-        hw->bz->play(hardware::Buzzer::CONFIRM);
+      if (!side && hw_->rfl->front(0) > thr_ref_front &&
+          hw_->rfl->front(1) > thr_ref_front) {
+        hw_->bz->play(hardware::Buzzer::CONFIRM);
         return true;
       }
-      if (side && hw->rfl->side(0) > thr_ref_side &&
-          hw->rfl->side(1) > thr_ref_side) {
-        hw->bz->play(hardware::Buzzer::CONFIRM);
+      if (side && hw_->rfl->side(0) > thr_ref_side &&
+          hw_->rfl->side(1) > thr_ref_side) {
+        hw_->bz->play(hardware::Buzzer::CONFIRM);
         return true;
       }
       /* CANCEL */
-      if (std::abs(hw->imu->get_accel3().x) > thr_accel) {
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (std::abs(hw_->imu->get_accel3().x) > thr_accel) {
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
         return false;
       }
-      if (hw->btn->long_pressed_1) {
-        hw->btn->flags = 0;
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (hw_->btn->long_pressed_1) {
+        hw_->btn->flags = 0;
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         return false;
       }
     }
@@ -146,18 +147,18 @@ class UserInterface {
    * @retval false タイムアウト
    */
   bool waitForPickup(const int wait_ms = 1200) {
-    hw->led->set(0xf);
+    hw_->led->set(0xf);
     for (int ms = 0; ms < wait_ms; ms++) {
       vTaskDelay(pdMS_TO_TICKS(1));
-      if (std::abs(hw->imu->get_gyro3().x) > thr_gyro_pickup ||
-          std::abs(hw->imu->get_gyro3().y) > thr_gyro_pickup ||
-          std::abs(hw->imu->get_gyro3().z) > thr_gyro_pickup) {
-        hw->bz->play(hardware::Buzzer::CANCEL);
-        hw->led->set(0x0);
+      const auto gyro = hw_->imu->get_gyro3();
+      if (std::abs(gyro.x) + std::abs(gyro.y) + std::abs(gyro.z) >
+          thr_gyro_pickup) {
+        hw_->bz->play(hardware::Buzzer::CANCEL);
+        hw_->led->set(0x0);
         return true;
       }
     }
-    hw->led->set(0x0);
+    hw_->led->set(0x0);
     return false;
   }
   /**
@@ -171,24 +172,24 @@ class UserInterface {
     while (1) {
       vTaskDelay(pdMS_TO_TICKS(1));
       /* FIX */
-      if (std::abs(hw->imu->get_gyro3().x) < thr_fix_gyro &&
-          std::abs(hw->imu->get_gyro3().y) < thr_fix_gyro &&
-          std::abs(hw->imu->get_gyro3().z) < thr_fix_gyro) {
+      if (std::abs(hw_->imu->get_gyro3().x) < thr_fix_gyro &&
+          std::abs(hw_->imu->get_gyro3().y) < thr_fix_gyro &&
+          std::abs(hw_->imu->get_gyro3().z) < thr_fix_gyro) {
         if (fix_count++ > wait_fix_ms) {
-          hw->bz->play(hardware::Buzzer::CONFIRM);
+          hw_->bz->play(hardware::Buzzer::CONFIRM);
           return true;
         }
       } else {
         fix_count = 0;
       }
       /* CANCEL */
-      if (hw->btn->pressed) {
-        hw->btn->flags = 0;
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (hw_->btn->pressed) {
+        hw_->btn->flags = 0;
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         return false;
       }
-      if (std::abs(hw->imu->get_accel3().x) > thr_accel) {
-        hw->bz->play(hardware::Buzzer::CANCEL);
+      if (std::abs(hw_->imu->get_accel3().x) > thr_accel) {
+        hw_->bz->play(hardware::Buzzer::CANCEL);
         vTaskDelay(pdMS_TO_TICKS(wait_ms));
         return false;
       }

@@ -38,7 +38,7 @@ static constexpr float IMURotationRadius = 10.0f;
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;
 static constexpr float wall_fix_offset = -5;  //< 大きく: 前壁に近く
-static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 49;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.4f;
@@ -82,7 +82,7 @@ static constexpr float IMURotationRadius = 0.0f;  //< N/A
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
-static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 49;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.4f;
@@ -126,7 +126,7 @@ static constexpr float IMURotationRadius = 10.0f;
 static constexpr float tof_raw_range_90 = 69;
 static constexpr float tof_raw_range_180 = 154;
 static constexpr float wall_fix_offset = -5; /*< 大きく: 前壁に近く */
-static constexpr uint8_t vl6180x_max_convergence_time = 32;  //< ms
+static constexpr uint8_t vl6180x_max_convergence_time = 49;  //< ms
 /* Reflector */
 static constexpr float front_wall_attach_gain = 30.0f;
 static constexpr float front_wall_attach_end = 0.1f;
@@ -208,5 +208,7 @@ static constexpr ctrl::TrajectoryTracker::Gain TrajectoryTrackerGain = {
 };
 
 #endif
+
+static constexpr float kBatteryVoltageDividerRatio = 1.0f / 2.0f;
 
 };  // namespace model

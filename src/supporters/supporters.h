@@ -23,17 +23,18 @@ class Supporters {
         sc(new SpeedController(hw)),
         wd(new WallDetector(hw)) {}
   bool init() {
-    if (!wd->init()) {
-      hw->bz->play(hardware::Buzzer::ERROR);
-      APP_LOGE("WallDetector init failed");
-      return false;
-    }
+    int ret = true;
     if (!sc->init()) {
       hw->bz->play(hardware::Buzzer::ERROR);
       APP_LOGE("SpeedController init failed");
-      return false;
+      ret = false;
     }
-    return true;
+    if (!wd->init()) {
+      hw->bz->play(hardware::Buzzer::ERROR);
+      APP_LOGE("WallDetector init failed");
+      ret = false;
+    }
+    return ret;
   }
 };
 

@@ -44,7 +44,7 @@ class Hardware {
     }
 
     /* Buzzer (initialize first to notify errors by sound) */
-    bz = Buzzer::get_instance();
+    bz = new Buzzer();
     bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
     /* Button */
     btn = new Button();
@@ -71,7 +71,7 @@ class Hardware {
       bz->play(hardware::Buzzer::ERROR);
     /* IMU */
     imu = new IMU();
-    if (imu->init(ICM20602_SPI_HOST, ICM20602_CS_PINS))
+    if (!imu->init(ICM20602_SPI_HOST, ICM20602_CS_PINS))
       bz->play(hardware::Buzzer::ERROR);
     /* Encoder */
     enc = new Encoder();
@@ -84,8 +84,9 @@ class Hardware {
     };
     if (!enc->init(encoder_parameter)) bz->play(hardware::Buzzer::ERROR);
     /* Reflector */
-    rfl = new Reflector(REFLECTOR_TX_PINS, REFLECTOR_RX_CHANNELS);
-    if (!rfl->init()) bz->play(hardware::Buzzer::ERROR);
+    rfl = new Reflector();
+    if (!rfl->init(REFLECTOR_TX_PINS, REFLECTOR_RX_CHANNELS))
+      bz->play(hardware::Buzzer::ERROR);
     /* ToF */
     tof = new ToF();
     ToF::Parameter tof_param = {
@@ -104,15 +105,22 @@ class Hardware {
     /* Ending */
     return true;
   }
+  void sampling_request() {
+    imu->sampling_request();
+    enc->sampling_request();
+  }
+  void sampling_wait() {
+    imu->sampling_wait();
+    enc->sampling_wait();
+  }
 
   /**
    * @brief Sample the Battery Voltage
    * @return float voltage [V]
    */
   static float getBatteryVoltage() {
-    // return 2 * 1.1f * 3.54813389f * analogRead(BAT_VOL_PIN) / 4095;
-    return 2 * peripheral::ADC::read_milli_voltage(BAT_VOL_ADC1_CHANNEL, 10) /
-           1e3f;
+    return 1e-3f / model::kBatteryVoltageDividerRatio *
+           peripheral::ADC::read_milli_voltage(BAT_VOL_ADC1_CHANNEL, 10);
   }
   /**
    * @brief バッテリー電圧をLEDで表示

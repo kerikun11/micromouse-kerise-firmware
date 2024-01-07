@@ -3,18 +3,14 @@
 
 void app_mouse() {
   /* pull-down motor pin */
-  gpio_config_t config = {
-      .pin_bit_mask = ((uint64_t)1 << MOTOR_L_CTRL1_PIN) |
-                      ((uint64_t)1 << MOTOR_L_CTRL2_PIN) |
-                      ((uint64_t)1 << MOTOR_R_CTRL1_PIN) |
-                      ((uint64_t)1 << MOTOR_R_CTRL2_PIN) |
-                      ((uint64_t)1 << FAN_PIN),
-      .mode = GPIO_MODE_INPUT,
-      .pull_up_en = GPIO_PULLUP_DISABLE,
-      .pull_down_en = GPIO_PULLDOWN_ENABLE,
-      .intr_type = GPIO_INTR_DISABLE,
-  };
-  ESP_ERROR_CHECK(gpio_config(&config));
+  for (gpio_num_t gpio_num : {
+           MOTOR_L_CTRL1_PIN,
+           MOTOR_L_CTRL2_PIN,
+           MOTOR_R_CTRL1_PIN,
+           MOTOR_R_CTRL2_PIN,
+           FAN_PIN,
+       })
+    ESP_ERROR_CHECK(gpio_pulldown_en(gpio_num));
   /* machine */
   auto machine = new machine::Machine();
   machine->init();

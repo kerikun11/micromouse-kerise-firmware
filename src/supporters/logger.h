@@ -17,36 +17,35 @@
 class Logger {
  public:
   Logger() {}
-  void clear() { buf.clear(); }
+  void clear() { buf_.clear(); }
   void init(const std::vector<std::string>& labels) {
+    labels_ = labels;
     clear();
-    this->labels = labels;
   }
-  void push(const std::vector<float>& data) { buf.push_back(data); }
+  void push(const std::vector<float>& data) { buf_.push_back(data); }
   void print() const {
-    if (buf.empty()) return;
+    if (buf_.empty()) return;
     /* header */
     std::printf("# KERISE v%d\n", KERISE_SELECT);
-    /* labels */
+    /* labels_ */
     std::printf("# ");
-    for (int i = 0; i < labels.size(); ++i) {
-      std::printf("%s", labels[i].c_str());
-      i < labels.size() - 1 && std::printf("\t");
+    for (int i = 0; i < labels_.size(); ++i) {
+      std::printf("%s", labels_[i].c_str());
+      if (i < labels_.size() - 1) std::printf("\t");
     }
     std::printf("\n");
     /* data */
-    for (const auto& data : buf) {
+    for (const auto& data : buf_) {
       for (int i = 0; i < data.size(); ++i) {
         std::printf("%.3e", (double)data[i]);  //< printf supports only double
-        i < data.size() - 1 && std::printf("\t");
+        if (i < data.size() - 1) std::printf("\t");
       }
       std::printf("\n");
-      // vTaskDelay(pdMS_TO_TICKS(1));
       taskYIELD();
     }
   }
 
  private:
-  std::vector<std::vector<float>> buf;
-  std::vector<std::string> labels;
+  std::vector<std::vector<float>> buf_;
+  std::vector<std::string> labels_;
 };

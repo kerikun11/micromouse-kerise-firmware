@@ -11,7 +11,7 @@
 #include <drivers/ma730/ma730.h>
 #include <freertospp/semphr.h>
 
-#include <cmath>
+#include <cmath>  //< for std::sin
 #include <mutex>
 #include <vector>
 
@@ -43,8 +43,8 @@ class Encoder {
     param_ = param;
     switch (param_.sensor_type) {
       case SensorType::AS5048A:
-        as = new drivers::AS5048A_DUAL();
-        if (!as->init(param.spi_host, param.gpio_nums_spi_cs[0])) {
+        as_ = new drivers::AS5048A_DUAL();
+        if (!as_->init(param.spi_host, param.gpio_nums_spi_cs[0])) {
           APP_LOGE("AS5048A init failed :(");
           return false;
         }
@@ -52,8 +52,8 @@ class Encoder {
         break;
       case SensorType::MA730:
         for (int i = 0; i < 2; ++i) {
-          ma[i] = new drivers::MA730();
-          if (!ma[i]->init(param.spi_host, param.gpio_nums_spi_cs[i])) {
+          ma_[i] = new drivers::MA730();
+          if (!ma_[i]->init(param.spi_host, param.gpio_nums_spi_cs[i])) {
             APP_LOGE("MA730[%d] init failed :(", i);
             return false;
           }
@@ -64,45 +64,54 @@ class Encoder {
         APP_LOGE("SensorType: %d", static_cast<int>(param_.sensor_type));
         break;
     }
+    const uint32_t stack_depth = 2048;
     xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "Encoder",
-        2048, this, TASK_PRIORITY_ENCODER, NULL, TASK_CORE_ID_ENCODER);
+        stack_depth, this, TASK_PRIORITY_ENCODER, &handle_,
+        TASK_CORE_ID_ENCODER);
     return true;
   }
   int get_raw(uint8_t ch) {
-    /* the reason the type of pulses is no problem with type int */
+    /* the reason the type of pulses_ is no problem with type int */
     /* estimated position 1,000 [mm/s] * 10 [min] * 60 [s/min] = 600,000 [mm] */
     /* int32_t 2,147,483,647 / 16384 * 1/3 * 3.1415 * 13 [mm] = 1,784,305 [mm]*/
-    std::lock_guard<std::mutex> lock_guard(mutex);
-    return pulses_raw[ch];
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return pulses_raw_[ch];
   }
   float get_position(uint8_t ch) {
-    std::lock_guard<std::mutex> lock_guard(mutex);
-    return positions[ch];
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return positions_[ch];
   }
   void clear_offset() {
-    std::lock_guard<std::mutex> lock_guard(mutex);
-    pulses_ovf[0] = pulses_ovf[1] = 0;
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    pulses_ovf_[0] = pulses_ovf_[1] = 0;
   }
   void csv() {
-    std::printf("%d,%d\n", -pulses[0], pulses[1]);  //
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    std::printf("%d,%d\n", -pulses_[0], pulses_[1]);
   }
-  void sampling_sync(TickType_t xBlockTime = portMAX_DELAY) const {
-    sampling_end_semaphore.take(xBlockTime);
+  void sampling_request() {
+    xTaskNotifyGive(handle_);  //
+  }
+  void sampling_wait(TickType_t xBlockTime = portMAX_DELAY) const {
+    sampling_end_semaphore_.take(xBlockTime);
   }
 
  private:
-  drivers::AS5048A_DUAL* as;
-  drivers::MA730* ma[2];
-  int pulses_size_;
-  int pulses[2] = {};
-  int pulses_raw[2] = {};
-  int pulses_prev[2] = {};
-  int pulses_ovf[2] = {};
-  float positions[2] = {};
-  freertospp::Semaphore sampling_end_semaphore;
-  std::mutex mutex;
+  TaskHandle_t handle_ = NULL;
+  drivers::AS5048A_DUAL* as_;
+  drivers::MA730* ma_[2];
   Parameter param_;
+  int pulses_size_;
+  freertospp::Semaphore sampling_end_semaphore_;
+
+  std::mutex mutex_;
+  int pulses_[2] = {};
+  int pulses_raw_[2] = {};
+  int pulses_prev_[2] = {};
+  int pulses_ovf_[2] = {};
+  float positions_[2] = {};
+
   const float ec_gain[2] = {
       9.5e-3f,
       8.0e-3f,
@@ -117,31 +126,32 @@ class Encoder {
   };
 
   void task() {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
-      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+      /* sync */
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+      /* fetch */
       update();
-      sampling_end_semaphore.give();
+      /* notify */
+      sampling_end_semaphore_.give();
     }
   }
-
   void update() {
     /* fetch data from encoder */
     switch (param_.sensor_type) {
       case SensorType::AS5048A: {
-        as->update();
-        for (int i = 0; i < 2; i++) pulses_raw[i] = as->get(i);
+        as_->update();
+        for (int i = 0; i < 2; i++) pulses_raw_[i] = as_->get(i);
       } break;
       case SensorType::MA730: {
         for (int i = 0; i < 2; i++) {
-          ma[i]->update();
-          pulses_raw[i] = ma[i]->get();
+          ma_[i]->update();
+          pulses_raw_[i] = ma_[i]->get();
           /* compensate eccentricity */
-          pulses_raw[i] += ec_gain[i] * pulses_size_ *
-                               std::sin(2 * PI *
-                                        (float(pulses_raw[i]) / pulses_size_ +
-                                         ec_phase[i])) +
-                           ec_offset[i];
+          pulses_raw_[i] += ec_gain[i] * pulses_size_ *
+                                std::sin(2 * PI *
+                                         (float(pulses_raw_[i]) / pulses_size_ +
+                                          ec_phase[i])) +
+                            ec_offset[i];
         }
       } break;
       default:
@@ -149,32 +159,32 @@ class Encoder {
         break;
     }
     /* lock values */
-    std::lock_guard<std::mutex> lock_guard(mutex);
+    std::lock_guard<std::mutex> lock_guard(mutex_);
     /* calculate physical value */
     float mm[2];
     for (int i = 0; i < 2; i++) {
       /* count overflow */
-      if (pulses_raw[i] > pulses_prev[i] + pulses_size_ / 2) {
-        pulses_ovf[i]--;
-      } else if (pulses_raw[i] < pulses_prev[i] - pulses_size_ / 2) {
-        pulses_ovf[i]++;
+      if (pulses_raw_[i] > pulses_prev_[i] + pulses_size_ / 2) {
+        pulses_ovf_[i]--;
+      } else if (pulses_raw_[i] < pulses_prev_[i] - pulses_size_ / 2) {
+        pulses_ovf_[i]++;
       }
-      pulses_prev[i] = pulses_raw[i];
+      pulses_prev_[i] = pulses_raw_[i];
       /* calculate position */
       float SCALE_PULSES_TO_MM = param_.gear_ratio * param_.wheel_diameter * PI;
-      pulses[i] = pulses_ovf[i] * pulses_size_ + pulses_raw[i];
-      mm[i] = (pulses_ovf[i] + float(pulses_raw[i]) / pulses_size_) *
+      pulses_[i] = pulses_ovf_[i] * pulses_size_ + pulses_raw_[i];
+      mm[i] = (pulses_ovf_[i] + float(pulses_raw_[i]) / pulses_size_) *
               SCALE_PULSES_TO_MM;
     }
     /* fix rotation direction */
     switch (param_.sensor_type) {
       case SensorType::AS5048A: {
-        positions[0] = +mm[0];
-        positions[1] = -mm[1];
+        positions_[0] = +mm[0];
+        positions_[1] = -mm[1];
       } break;
       case SensorType::MA730: {
-        positions[0] = -mm[0];
-        positions[1] = +mm[1];
+        positions_[0] = -mm[0];
+        positions_[1] = +mm[1];
       } break;
       default:
         APP_LOGE("SensorType: %d", static_cast<int>(param_.sensor_type));

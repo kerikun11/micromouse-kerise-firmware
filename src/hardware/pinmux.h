@@ -22,8 +22,8 @@ struct DeviceParameter {
   gpio_num_t gpio_num_button;
 
   /* Reflector */
-  std::array<gpio_num_t, Reflector::NUM_CHANNELS> gpio_nums_reflector_tx;
-  std::array<adc_channel_t, Reflector::NUM_CHANNELS> adc_channels_reflector_rx;
+  std::array<gpio_num_t, Reflector::kNumChannels> gpio_nums_reflector_tx;
+  std::array<adc_channel_t, Reflector::kNumChannels> adc_channels_reflector_rx;
 
   /* I2C Bus */
   i2c_port_t i2c_port;

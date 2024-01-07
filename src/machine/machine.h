@@ -38,7 +38,7 @@ class Machine {
         Machine::selectFanGain();
         break;
       case 5: /* 迷路データ・探索状態の復元・削除 */
-        Machine::selectBackupData();
+        Machine::selectMazeData();
         break;
       case 6: /* ゴール区画の設定 */
         Machine::setGoalPositions();
@@ -52,8 +52,8 @@ class Machine {
       case 9: /* 壁センサのリアルタイム表示 */
         Machine::print_wall_detector();
         break;
-      case 10: /* 迷路情報の表示 */
-        mr->print();
+      case 10: /* リセット */
+        esp_restart();
         break;
       case 11: /* タイヤ径の測定 */
         Machine::wheel_diameter_measurement();
@@ -161,12 +161,12 @@ class Machine {
     if (value < 0) return;
     switch (mode) {
       case 0: /* 斜め走行 */
-        ma->rp_search.diag_enabled = value & 0x01;
-        ma->rp_fast.diag_enabled = value & 0x02;
+        ma->rp_search.diag_enabled = value & 1;
+        ma->rp_fast.diag_enabled = value & 2;
         break;
       case 1: /* 未知区間加速 */
-        ma->rp_search.unknown_accel_enabled = value & 0x01;
-        ma->rp_fast.unknown_accel_enabled = value & 0x02;
+        ma->rp_search.unknown_accel_enabled = value & 1;
+        ma->rp_fast.unknown_accel_enabled = value & 2;
         break;
       case 2: /* 前壁補正 */
         ma->rp_search.front_wall_fix_enabled = value & 1;
@@ -213,7 +213,8 @@ class Machine {
     ma->rp_fast.fan_duty = fan_duty;
     hw->bz->play(hardware::Buzzer::SUCCESSFUL);
   }
-  void selectBackupData() {
+  void selectMazeData() {
+    mr->print();
     int mode = sp->ui->waitForSelect(2);
     if (mode < 0) return;
     /* wait for confirm */
@@ -300,29 +301,19 @@ class Machine {
         mr->setGoals({MazeLib::Position(x, y)});
         break;
       }
-      case 1:  //< 調整迷路
-        mr->setGoals({MazeLib::Position(1, 0)});
+      case 1:  //< 調整迷路 (9x9)
+        mr->setGoals(MAZE_GOAL_TEST);
         mr->setTimeout(9);
         break;
-      case 2:  //< 調整迷路
-        mr->setGoals({MazeLib::Position(8, 8)});
+      case 2:  //< 本番迷路 (16x16)
+        mr->setGoals(MAZE_GOAL_16);
         mr->setTimeout(16);
         break;
-      case 15:  //< 本番迷路
-        mr->setGoals({
-            MazeLib::Position(16, 16),
-            MazeLib::Position(16, 17),
-            MazeLib::Position(16, 18),
-            MazeLib::Position(17, 16),
-            MazeLib::Position(17, 17),
-            MazeLib::Position(17, 18),
-            MazeLib::Position(18, 16),
-            MazeLib::Position(18, 17),
-            MazeLib::Position(18, 18),
-        });
+      case 15:  //< 本番迷路 (32x32)
+        mr->setGoals(MAZE_GOAL_32);
         mr->setTimeout(32);
         break;
-      default:
+      default:  //< (value, value) をゴールとする
         mr->setGoals({MazeLib::Position(value, value)});
         break;
     }
@@ -467,7 +458,7 @@ class Machine {
     else
       hw->mt->drive(gain * 0.1f, gain * 0.1f);  //< 並進
     for (int i = 0; i < 2000; i++) {
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       push_log();
     }
     hw->fan->drive(0);
@@ -497,7 +488,7 @@ class Machine {
       sp->sc->enable();  //< includes position reset
       for (float t = 0; !hw->mt->is_emergency(); t += 1e-3f) {
         sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
-        sp->sc->sampling_sync();
+        sp->sc->sampling_wait();
         if (sp->sc->est_p.x > dist) break;
       }
       /* stop statically */
@@ -532,7 +523,7 @@ class Machine {
     sp->sc->enable();
     for (float t = 0; t < ad.t_end() + 0.1f; t += 1e-3f) {
       sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       // if ((int)(t * 1000) % 2 == 0)
       log_push(log_select, ctrl::Pose(ad.x(t)), sp->sc->est_p);
       if (hw->mt->is_emergency()) break;
@@ -577,7 +568,7 @@ class Machine {
         sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
       else
         sp->sc->set_target(0, ad.v(t), 0, ad.a(t));
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       if ((int)(t * 1000) % 2 == 0)
         log_push(log_select,
                  dir == 0 ? ctrl::Pose(ad.x(t)) : ctrl::Pose(0, 0, ad.x(t)),
@@ -629,7 +620,7 @@ class Machine {
       const auto est_q = sp->sc->est_p;
       const auto ref = tt.update(est_q, sp->sc->est_v, sp->sc->est_a, ref_s);
       sp->sc->set_target(ref.v, ref.w, ref.dv, ref.dw);
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       log_push(log_select, ref_s.q.homogeneous(offset),
                est_q.homogeneous(offset));
     }
@@ -644,7 +635,7 @@ class Machine {
       auto est_q = sp->sc->est_p;
       auto ref = tt.update(est_q, sp->sc->est_v, sp->sc->est_a, ref_s);
       sp->sc->set_target(ref.v, ref.w, ref.dv, ref.dw);
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       log_push(log_select, ref_s.q.homogeneous(offset),
                est_q.homogeneous(offset));
     }
@@ -660,7 +651,7 @@ class Machine {
       auto est_q = sp->sc->est_p;
       auto ref = tt.update(est_q, sp->sc->est_v, sp->sc->est_a, ref_s);
       sp->sc->set_target(ref.v, ref.w, ref.dv, ref.dw);
-      sp->sc->sampling_sync();
+      sp->sc->sampling_wait();
       log_push(log_select, ref_s.q.homogeneous(offset),
                est_q.homogeneous(offset));
     }
@@ -726,7 +717,7 @@ class Machine {
           wp.wheel[j] =
               sp->wd->distance_average.front[j] * model::front_wall_attach_gain;
         }
-        wp.wheel2pole();
+        const ctrl::Polar p = wp.toPolar(model::RotationRadius);
         /* 終了条件 */
         const float end = model::front_wall_attach_end;
         if (math_utils::sum_of_square(wp.wheel[0], wp.wheel[1]) < end) {
@@ -736,9 +727,9 @@ class Machine {
         /* 制御 */
         const float sat_tra = 180.0f;  //< [mm/s]
         const float sat_rot = PI / 2;  //< [rad/s]
-        sp->sc->set_target(math_utils::saturate(wp.tra, sat_tra),
-                           math_utils::saturate(wp.rot, sat_rot));
-        sp->sc->sampling_sync();
+        sp->sc->set_target(math_utils::saturate(p.tra, sat_tra),
+                           math_utils::saturate(p.rot, sat_rot));
+        sp->sc->sampling_wait();
       }
       hw->bz->play(result ? hardware::Buzzer::SUCCESSFUL
                           : hardware::Buzzer::CANCEL);
@@ -756,27 +747,18 @@ class Machine {
     }
   }
   void print_wall_detector() {
-    // int value = sp->ui->waitForSelect(16);
-    // if (value < 0)
-    //   return;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
-      APP_LOGI(
-          "Dist:[%5.1f %5.1f %5.1f %5.1f] Wall:[%c %c %c] "
-          "ToF:[%3d mm %3d ms (%3d mm)]",
-          (double)sp->wd->distance.side[0], (double)sp->wd->distance.front[0],
-          (double)sp->wd->distance.front[1], (double)sp->wd->distance.side[1],
-          sp->wd->walls.side[0] ? 'X' : '_', sp->wd->walls.front ? 'X' : '_',
-          sp->wd->walls.side[1] ? 'X' : '_', hw->tof->getDistance(),
-          hw->tof->passedTimeMs(), hw->tof->getRangeRaw());
+      sp->wd->print();
     }
   }
   bool check_chip() {
     auto mac = peripheral::ESP::get_mac();
     if (mac != model::MAC_ID) {
       APP_LOGW("MAC ID mismatched!");
-      APP_LOGW("MAC ID: 0x%012llX != 0x%012llX", mac, model::MAC_ID);
+      APP_LOGW("MAC ID: 0x%012llX (real) != 0x%012llX (expected)", mac,
+               model::MAC_ID);
       return false;
     }
     return true;
@@ -793,7 +775,7 @@ class Machine {
     peripheral::SPIFFS::show_info();
     /* check chip */
     if (!check_chip()) {
-      auto* bz = hardware::Buzzer::get_instance();
+      auto* bz = new hardware::Buzzer();
       bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
       bz->play(hardware::Buzzer::TIMEOUT);
       return false;

@@ -12,7 +12,7 @@
 #include <freertos/task.h>
 #include <peripheral/spi.h>
 
-#include "motion_parameter.h"
+#include "utils/motion_parameter.h"
 
 namespace drivers {
 

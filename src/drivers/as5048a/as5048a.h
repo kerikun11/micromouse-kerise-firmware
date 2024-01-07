@@ -37,7 +37,7 @@ class AS5048A_DUAL {
         .pre_cb = NULL,
         .post_cb = NULL,
     };
-    ESP_ERROR_CHECK(spi_bus_add_device(spi_host, &dev_cfg, &encoder_spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(spi_host, &dev_cfg, &encoder_spi_));
     return update();
   }
   bool update() {
@@ -47,7 +47,7 @@ class AS5048A_DUAL {
     tx.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
     tx.tx_data[0] = tx.tx_data[1] = tx.tx_data[2] = tx.tx_data[3] = 0xFF;
     tx.length = 32;
-    ESP_ERROR_CHECK(spi_device_transmit(encoder_spi, &tx));
+    ESP_ERROR_CHECK(spi_device_transmit(encoder_spi_, &tx));
     /* data parse */
     uint16_t pkt[2];
     pkt[0] = (tx.rx_data[0] << 8) | tx.rx_data[1];
@@ -58,16 +58,16 @@ class AS5048A_DUAL {
         res = false;
         continue;
       }
-      pulses[i] = pkt[i] & 0x3FFF;
+      pulses_[i] = pkt[i] & 0x3FFF;
     }
     return res;
   }
-  int get(int ch) const { return pulses[ch]; }
+  int get(int ch) const { return pulses_[ch]; }
 
  private:
   static constexpr const char* TAG = "AS5048A";
-  spi_device_handle_t encoder_spi = NULL;
-  int pulses[2] = {0, 0};
+  spi_device_handle_t encoder_spi_ = NULL;
+  int pulses_[2] = {0, 0};
 
   static uint8_t calc_even_parity(uint16_t data) {
     data ^= data >> 8;

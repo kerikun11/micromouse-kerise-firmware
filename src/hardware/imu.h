@@ -10,9 +10,9 @@
 #include <drivers/icm20602/icm20602.h>
 #include <freertospp/semphr.h>
 
-#include <array>
 #include <condition_variable>
 #include <mutex>
+#include <vector>
 
 #include "app_log.h"
 
@@ -20,35 +20,42 @@ namespace hardware {
 
 class IMU {
  public:
-  static constexpr float Ts = 1e-3f;
-  static constexpr int NUM_IMU_MAX = 2;
-
- public:
   IMU() {}
-  int init(spi_host_device_t spi_host, std::vector<gpio_num_t> pins_cs,
-           float rotation_radius = 1) {
-    int ret = 0;
-    num_imu_ = pins_cs.size();
+  bool init(spi_host_device_t spi_host, std::vector<gpio_num_t> gpio_nums_cs,
+            float rotation_radius = 0) {
     rotation_radius_ = rotation_radius;
-    for (int i = 0; i < num_imu_; ++i) {
-      if (icm_[i].init(spi_host, pins_cs[i])) {
+    icm_.resize(gpio_nums_cs.size());
+    raw_accel_.resize(gpio_nums_cs.size());
+    raw_gyro_.resize(gpio_nums_cs.size());
+    APP_LOGI("spi_host: %d size: %d rotation_radius: %f", spi_host,
+             gpio_nums_cs.size(), (double)rotation_radius);
+    /* check param */
+    if (gpio_nums_cs.size() == 2 && rotation_radius_ <= 0) {
+      APP_LOGE("IMU param error. rotation_radius: %f",
+               (double)rotation_radius_);
+      return false;
+    }
+    /* init icm */
+    int ret = 0;
+    for (int i = 0; i < icm_.size(); ++i) {
+      if (icm_[i].init(spi_host, gpio_nums_cs[i])) {
         APP_LOGE("IMU[%d] init failed :(", i);
         ret += 1 << i;
       }
     }
-    xTaskCreatePinnedToCore(
+    if (ret) {
+      return false;
+    }
+    /* create task */
+    const uint32_t stack_depth = 4096;
+    BaseType_t result = xTaskCreatePinnedToCore(
         [](void* arg) { static_cast<decltype(this)>(arg)->task(); }, "IMU",
-        4096, this, TASK_PRIORITY_IMU, NULL, TASK_CORE_ID_IMU);
-    sampling_sync();  //< wait for first sample
-    return ret;       //< 0: OK, otherwise: NG
-  }
-  int deinit() {
-    deinit_req_ = true;
-    /* wait for task deleted */
-    std::unique_lock<std::mutex> unique_lock(deinit_mutex_);
-    deinit_cv_.wait(unique_lock, [&] { return !deinit_req_; });
-    for (int i = 0; i < num_imu_; ++i) icm_[i].deinit();
-    return 0;
+        stack_depth, this, TASK_PRIORITY_IMU, &handle_, TASK_CORE_ID_IMU);
+    if (result != pdPASS) {
+      APP_LOGE("xTaskCreatePinnedToCore failed. result: %d", result);
+      return false;
+    }
+    return true;
   }
   void calibration() {
     calibration_req_ = true;
@@ -56,7 +63,10 @@ class IMU {
     std::unique_lock<std::mutex> unique_lock(calibration_mutex_);
     calibration_cv_.wait(unique_lock, [&] { return !calibration_req_; });
   }
-  void sampling_sync(TickType_t xBlockTime = portMAX_DELAY) const {
+  void sampling_request() {
+    xTaskNotifyGive(handle_);  //
+  }
+  void sampling_wait(TickType_t xBlockTime = portMAX_DELAY) const {
     sampling_end_semaphore_.take(xBlockTime);
   }
   void print() {
@@ -73,7 +83,7 @@ class IMU {
     std::cout << '\t' << gyro_.y;
     std::cout << '\t' << gyro_.z;
 #if 1
-    for (int i = 0; i < num_imu_; ++i) {
+    for (int i = 0; i < icm_.size(); ++i) {
       std::cout << '\t' << raw_gyro_[i].x;
       std::cout << '\t' << raw_gyro_[i].y;
       std::cout << '\t' << raw_gyro_[i].z;
@@ -103,57 +113,48 @@ class IMU {
   }
 
  protected:
-  std::array<drivers::ICM20602, NUM_IMU_MAX> icm_;
-  std::array<MotionParameter, NUM_IMU_MAX> raw_gyro_, raw_accel_;
-  int num_imu_ = 1;
-  float rotation_radius_ = 1;
+  TaskHandle_t handle_ = NULL;
+  std::vector<drivers::ICM20602> icm_;
+  std::vector<MotionParameter> raw_gyro_, raw_accel_;
+  float rotation_radius_ = 0;
 
   std::mutex mutex_;
   MotionParameter gyro_, accel_;
   float angular_accel_ = 0;
+  uint64_t last_timestamp_us_ = 0;
 
   freertospp::Semaphore sampling_end_semaphore_;
   MotionParameter gyro_offset_, accel_offset_;
-
-  bool deinit_req_ = false;
-  std::mutex deinit_mutex_;
-  std::condition_variable deinit_cv_;
 
   bool calibration_req_ = false;
   std::mutex calibration_mutex_;
   std::condition_variable calibration_cv_;
 
   void task() {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    while (!deinit_req_) {
+    while (1) {
       /* sync */
-      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
       /* fetch */
       update();
       /* notify */
       sampling_end_semaphore_.give();
       /* calibration */
       if (calibration_req_) {
-        task_calibration(xLastWakeTime);
+        task_calibration();
         std::lock_guard<std::mutex> lock_guard(calibration_mutex_);
         calibration_req_ = false;
         calibration_cv_.notify_all();
       }
     }
-    /* notify */
-    std::lock_guard<std::mutex> lock_guard(deinit_mutex_);
-    deinit_req_ = false;
-    deinit_cv_.notify_all();
-    vTaskDelete(NULL);
   }
-  void task_calibration(TickType_t& xLastWakeTime) {
+  void task_calibration() {
     const int ave_count = 200;
     accel_offset_ = MotionParameter();
     gyro_offset_ = MotionParameter();
     for (int j = 0; j < 2; j++) {
       MotionParameter accel_sum, gyro_sum;
       for (int i = 0; i < ave_count; i++) {
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         update();
         sampling_end_semaphore_.give();
         accel_sum += accel_;
@@ -165,24 +166,29 @@ class IMU {
   }
   void update() {
     /* sampling */
-    for (size_t i = 0; i < num_imu_; i++) icm_[i].update();
+    for (size_t i = 0; i < icm_.size(); i++) icm_[i].update();
 
     /* lock local variables */
     std::lock_guard<std::mutex> lock_guard(mutex_);
 
     /* read sensor data */
-    for (size_t i = 0; i < num_imu_; i++) {
+    for (size_t i = 0; i < icm_.size(); i++) {
       raw_accel_[i] = icm_[i].accel();
       raw_gyro_[i] = icm_[i].gyro();
     }
 
-    if (num_imu_ == 1) {
+    if (icm_.size() == 1) {
       const auto prev_gyro_z = gyro_.z;
       gyro_ = raw_gyro_[0] - gyro_offset_;
       accel_ = raw_accel_[0] - accel_offset_;
       /* calculate angular accel */
-      angular_accel_ = (gyro_.z - prev_gyro_z) / Ts;
-    } else if (num_imu_ == 2) {
+      uint64_t us = esp_timer_get_time();
+      if (last_timestamp_us_ != 0) {
+        float Ts = (us - last_timestamp_us_) / 1e6f;
+        angular_accel_ = (gyro_.z - prev_gyro_z) / Ts;
+      }
+      last_timestamp_us_ = us;
+    } else if (icm_.size() == 2) {
       /* fix sensor orientation */
       raw_gyro_[0].x = -raw_gyro_[0].x;
       raw_gyro_[0].y = -raw_gyro_[0].y;
@@ -195,7 +201,7 @@ class IMU {
       angular_accel_ =
           (raw_accel_[0].y + raw_accel_[1].y) / 2 / rotation_radius_;
     } else {
-      APP_LOGE("IMU size error. num_imu_: %d", num_imu_);
+      APP_LOGE("IMU size error. icm_.size(): %d", icm_.size());
     }
   }
 };

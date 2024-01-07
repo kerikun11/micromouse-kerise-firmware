@@ -17,20 +17,29 @@
 
 using namespace MazeLib;
 
-/* 大会前には必ず 0 にする */
+/* 大会前には必ず 32 にする */
 #define MAZE_ROBOT_TIMEOUT_SELECT 1
 #define MAZE_ROBOT_GOAL_SELECT 1
 
 /* ゴール座標 */
-#if MAZE_ROBOT_GOAL_SELECT == 0
-#define MAZE_GOAL \
-  { MazeLib::Position(16, 16) }
+#define MAZE_GOAL_32                                          \
+  {                                                           \
+    MazeLib::Position(16, 16), MazeLib::Position(16, 17),     \
+        MazeLib::Position(16, 18), MazeLib::Position(17, 16), \
+        MazeLib::Position(17, 17), MazeLib::Position(17, 18), \
+        MazeLib::Position(18, 16), MazeLib::Position(18, 17), \
+        MazeLib::Position(18, 18),                            \
+  }
+#define MAZE_GOAL_16 \
+  { MazeLib::Position(7, 7), }
+#define MAZE_GOAL_TEST \
+  { MazeLib::Position(1, 0), }
+#if MAZE_ROBOT_GOAL_SELECT == 32
+#define MAZE_GOAL MAZE_GOAL_32
+#elif MAZE_ROBOT_GOAL_SELECT == 16
+#define MAZE_GOAL MAZE_GOAL_16
 #elif MAZE_ROBOT_GOAL_SELECT == 1
-#define MAZE_GOAL \
-  { MazeLib::Position(1, 0) }
-#elif MAZE_ROBOT_GOAL_SELECT == 2
-#define MAZE_GOAL \
-  { MazeLib::Position(7, 7) }
+#define MAZE_GOAL MAZE_GOAL_TEST
 #endif
 
 /* ログ */
@@ -71,25 +80,24 @@ class MazeRobot : public RobotBase {
     State() { set_timeout(MAZE_ROBOT_TIMEOUT_SELECT); }
     void set_timeout(int size) {
       switch (size) {
-        case 0:
         case 32:
           competition_limit_time_s = 60 * 10 - 120;
-          expected_fast_run_time_s = 60;  //< 4分 で打ち切り
+          expected_fast_run_time_s = 60;  //< 探索は4分で打ち切り
           break;
-        case 2:
         case 16:
-          competition_limit_time_s = 60 * 5 - 30;
-          expected_fast_run_time_s = 45;  //< 45: 2分で打ち切り
+          competition_limit_time_s = 60 * 5 - 60;
+          expected_fast_run_time_s = 30;  //< 探索は2分で打ち切り
           break;
         case 1:
+        case 8:
         case 9:
-          competition_limit_time_s = 3 * 60;
-          expected_fast_run_time_s = 30;  //< 30: 1分で打ち切り
+          competition_limit_time_s = 60 * 3 - 30;
+          expected_fast_run_time_s = 20;  //< 探索は1分で打ち切り
           break;
       }
     }
     bool save(const char* filepath = STATE_SAVE_PATH) {
-      backup_time_ms = get_eraped_time_ms();
+      backup_time_s = get_elapsed_time_s();
       std::ofstream of(filepath, std::ios::binary);
       if (of.fail()) {
         APP_LOGE("failed to open file: %s", filepath);
@@ -105,7 +113,7 @@ class MazeRobot : public RobotBase {
         return false;
       }
       f.read((char*)this, sizeof(*this));
-      offset_time_ms = backup_time_ms;
+      offset_time_s = backup_time_s;
       running_parameter = 0;
       return true;
     }
@@ -139,7 +147,7 @@ class MazeRobot : public RobotBase {
     bool no_more_time() {
       int time_limit_s = competition_limit_time_s -
                          get_try_count_remain() * expected_fast_run_time_s;
-      return get_eraped_time_ms() / 1000 > time_limit_s;
+      return get_elapsed_time_s() > time_limit_s;
     }
     int get_try_count_remain() const { return max_try_count - try_count; }
     int get_try_count() const { return try_count; }
@@ -148,15 +156,15 @@ class MazeRobot : public RobotBase {
    private:
     int competition_limit_time_s;
     int expected_fast_run_time_s;
-    int backup_time_ms = 0;            /**< 追加時間 */
-    int offset_time_ms = 0;            /**< 追加時間 */
-    int try_count = 0;                 /**< 走行回数 */
+    int backup_time_s = 0; /**< 最後にバックアップした時刻 */
+    int offset_time_s = 0; /**< 追加時間 */
+    int try_count = 0;     /**< 走行回数 */
     int succeeded_parameter = INT_MIN; /**< 成功パラメータ */
     bool has_reached_goal = false; /**< ゴール区画にたどり着いたか */
     bool is_fast_run = false;      /**< 最短走行の途中かどうか */
 
-    int get_eraped_time_ms() const {
-      return offset_time_ms + esp_timer_get_time() / 1000;
+    int get_elapsed_time_s() const {
+      return offset_time_s + esp_timer_get_time() / 1000000;
     }
   };
 
@@ -270,7 +278,7 @@ class MazeRobot : public RobotBase {
     if (!calcData.isForceBackToStart && state.no_more_time()) {
       setForceBackToStart();
       hw->bz->play(hardware::Buzzer::TIMEOUT);
-      MR_LOGI("timoout");
+      MR_LOGI("timeout");
     }
   }
   void calcNextDirectionsPostCallback(

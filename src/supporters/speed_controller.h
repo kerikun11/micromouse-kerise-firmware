@@ -13,28 +13,30 @@
 #include <ctrl/pose.h>
 #include <freertospp/semphr.h>
 
-#include "config/wheel_parameter.h"
 #include "hardware/hardware.h"
+#include "utils/timer_semaphore.h"
+#include "utils/wheel_parameter.h"
 
 class SpeedController {
  public:
-  static constexpr const float Ts = 1e-3f;
-  static constexpr const int acc_num = 4;
+  static constexpr const int sampling_period_us = 1000;
+  static constexpr const float Ts = sampling_period_us / 1e6f;
+  static constexpr const int kAccumulateSize = 4;
 
- public:
+ public:  // ToDo: make private
   /* 読み取り専用 */
   ctrl::Polar ref_v;
   ctrl::Polar ref_a;
   ctrl::Polar est_v;
   ctrl::Polar est_a;
+  ctrl::Polar enc_v;
   ctrl::Pose est_p;
-  WheelParameter enc_v;
-  ctrl::Accumulator<float, acc_num> wheel_position[2];
-  ctrl::Accumulator<ctrl::Polar, acc_num> accel;
+  ctrl::Accumulator<float, kAccumulateSize> wheel_position[2];
+  ctrl::Accumulator<ctrl::Polar, kAccumulateSize> accel;
 
  public:
   SpeedController(hardware::Hardware* hw)
-      : hw(hw), fbc(model::SpeedControllerModel, model::SpeedControllerGain) {
+      : hw_(hw), fbc_(model::SpeedControllerModel, model::SpeedControllerGain) {
     reset();
   }
   bool init() {
@@ -54,9 +56,9 @@ class SpeedController {
       est_p.clear();
       enc_v.clear();
       for (int i = 0; i < 2; i++)
-        wheel_position[i].clear(hw->enc->get_position(i));
-      accel.clear({hw->imu->get_accel(), hw->imu->get_angular_accel()});
-      fbc.reset();
+        wheel_position[i].clear(hw_->enc->get_position(i));
+      accel.clear({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
+      fbc_.reset();
     }
     // vTaskDelay(pdMS_TO_TICKS(50));  //< 緊急ループ防止の delay
   }
@@ -67,13 +69,13 @@ class SpeedController {
   void disable() {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     drive_enabled_ = false;
-    hw->mt->free();
-    hw->fan->drive(0);
+    hw_->mt->free();
+    hw_->fan->free();
   }
   void set_target(float v_tra, float v_rot, float a_tra = 0, float a_rot = 0) {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     ref_v.tra = v_tra, ref_v.rot = v_rot, ref_a.tra = a_tra, ref_a.rot = a_rot;
-    if (drive_enabled_) drive();
+    drive();
   }
   void update_pose(const ctrl::Pose& new_pose) {
     std::lock_guard<std::mutex> lock_guard(mutex_);
@@ -88,50 +90,53 @@ class SpeedController {
     }
     est_p += fix;
   }
-  void sampling_sync() const {  //
+  void sampling_wait() const {  //
     data_ready_semaphore_.take();
   }
   const ctrl::FeedbackController<ctrl::Polar>& getFeedbackController() const {
-    return fbc;
+    return fbc_;
   }
 
  private:
-  hardware::Hardware* hw;
-  ctrl::FeedbackController<ctrl::Polar> fbc;
+  hardware::Hardware* hw_;
+  ctrl::FeedbackController<ctrl::Polar> fbc_;
   bool drive_enabled_ = false;
   freertospp::Semaphore data_ready_semaphore_;
+  TimerSemaphore sampling_semaphore_;
   std::mutex mutex_;
 
   void task() {
+    sampling_semaphore_.start_periodic(sampling_period_us);
     while (1) {
-      /* sampling sync */
-      hw->imu->sampling_sync();
-      hw->enc->sampling_sync();
+      /* sync */
+      sampling_semaphore_.take();
+      /* sampling start */
+      hw_->sampling_request();
+      /* wait for sampling finished */
+      hw_->sampling_wait();
       /* lock data */
       std::lock_guard<std::mutex> lock_guard(mutex_);
       /* update data */
-      update_samples();
       update_estimator();
       update_odometry();
-      /* notify app */
-      data_ready_semaphore_.give();
       /* PID control */
-      if (drive_enabled_) drive();
+      drive();
+      /* notify */
+      data_ready_semaphore_.give();
     }
   }
-  void update_samples() {
+  void update_estimator() {
     /* add new samples */
     for (int i = 0; i < 2; i++)
-      wheel_position[i].push(hw->enc->get_position(i));
-    accel.push({hw->imu->get_accel(), hw->imu->get_angular_accel()});
-  }
-  void update_estimator() {
+      wheel_position[i].push(hw_->enc->get_position(i));
+    accel.push({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
     /* calculate differential of encoder value */
+    WheelParameter wp;
     for (int i = 0; i < 2; i++)
-      enc_v.wheel[i] = (wheel_position[i][0] - wheel_position[i][1]) / Ts;
-    enc_v.wheel2pole();
+      wp.wheel[i] = (wheel_position[i][0] - wheel_position[i][1]) / Ts;
+    enc_v = wp.toPolar(model::RotationRadius);
     /* calculate estimated velocity value with complementary filter */
-    const ctrl::Polar v_low = ctrl::Polar(enc_v.tra, hw->imu->get_gyro());
+    const ctrl::Polar v_low = ctrl::Polar(enc_v.tra, hw_->imu->get_gyro());
     const ctrl::Polar v_high = est_v + accel[0] * float(Ts);
     const ctrl::Polar alpha = model::velocity_filter_alpha;
     est_v = alpha * v_low + (ctrl::Polar(1, 1) - alpha) * v_high;
@@ -144,16 +149,16 @@ class SpeedController {
     const float k = 0.0f;
     const float slip_angle = k * ref_v.tra * ref_v.rot / 1000;
     /* calculate odometry value */
-    est_p.th += hw->imu->get_gyro() * Ts;
+    est_p.th += hw_->imu->get_gyro() * Ts;
     est_p.x += enc_v.tra * std::cos(est_p.th + slip_angle) * Ts;
     est_p.y += enc_v.tra * std::sin(est_p.th + slip_angle) * Ts;
   }
   void drive() {
     /* calculate pwm value */
-    const auto pwm_value = fbc.update(ref_v, est_v, ref_a, est_a, Ts);
+    const auto pwm_value = fbc_.update(ref_v, est_v, ref_a, est_a, Ts);
     const float pwm_value_L = pwm_value.tra - pwm_value.rot / 2;
     const float pwm_value_R = pwm_value.tra + pwm_value.rot / 2;
     /* drive the motors */
-    hw->mt->drive(pwm_value_L, pwm_value_R);
+    if (drive_enabled_) hw_->mt->drive(pwm_value_L, pwm_value_R);
   }
 };

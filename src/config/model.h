@@ -33,7 +33,7 @@ static constexpr float GearRatio = 1.0f;
 static constexpr float WheelDiameter = 12.72f;  //< 径を大きく：進行距離を短く
 static constexpr float CenterOffsetY = 0.0f;
 static constexpr float TailLength = 13.0f;
-static constexpr float IMURotationRadius = 10.0f;
+static constexpr float IMURotationRadius = 12.0f;
 /* ToF */
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;

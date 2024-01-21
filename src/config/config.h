@@ -14,12 +14,12 @@
 #define MACHINE_DRIVE_AUTO_ENABLED 0
 
 /* Log Target */
-#define APP_LOG_MEM_MODE 0
+#define APP_LOG_MEM_MODE_ENABLED 0
 
 /* Log Level */
 #define APP_LOG_LEVEL 3
-#define MR_LOG_LEVEL 4
-#define MA_LOG_LEVEL 4
+#define MR_LOG_LEVEL 3
+#define MA_LOG_LEVEL 3
 
 /* Task Priority */
 #define TASK_PRIORITY_REFLECTOR 20

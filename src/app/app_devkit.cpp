@@ -9,184 +9,41 @@
 
 #include "app_log.h"
 
+void spiffs_test() {
+  peripheral::SPIFFS::init();
+  peripheral::SPIFFS::show_info();
+}
+
+void buzzer_test() {
+  auto* bz = new hardware::Buzzer();
+  bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
+  bz->play(hardware::Buzzer::BOOT);
+}
+
+void reflector_test() {
+  if (!peripheral::ADC::init()) {
+    APP_LOGE("ADC init failed:(");
+    return;
+  }
+  auto* rfl = new hardware::Reflector();
+  if (!rfl->init(REFLECTOR_TX_PINS, REFLECTOR_RX_CHANNELS)) {
+    APP_LOGE("reflector init failed:(");
+    return;
+  }
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while (1) {
+    vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
+    // rfl->print();
+    rfl->csv();
+  }
+}
+
 void app_devkit() {
   APP_LOGI("This is ESP32 DevKit");
   APP_LOGI("CPU Freq: %d MHz", peripheral::ESP::get_cpu_freq_in_mhz());
 
-#if 0
-  /* show SPIFFS info */
-  peripheral::SPIFFS::init();
-  peripheral::SPIFFS::show_info();
-#endif
-
-#if 1
-  auto* bz = new hardware::Buzzer();
-  bz->init(BUZZER_PIN, BUZZER_LEDC_TIMER, BUZZER_LEDC_CHANNEL);
-  bz->play(hardware::Buzzer::BOOT);
-#endif
-
-#if 0
-  {
-    std::stringstream ss;
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < 10; i++) {
-      ss << "Hello world" << std::endl;
-      std::cout << i << ":" << ss.str().capacity() << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("t1-t0: %d", t1 - t0);
-  }
-  {
-    std::stringstream ss;
-    ss.str().reserve(10 * 12);
-    std::cout << "ss.str().capacity():" << ss.str().capacity() << std::endl;
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < 10; i++) {
-      ss << "Hello world" << std::endl;
-      std::cout << i << ":" << ss.str().capacity() << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("t1-t0: %d", t1 - t0);
-  }
-  {
-    std::string str;
-    str.reserve(10 * 12);
-    std::stringstream ss(str);
-    std::cout << "str.capacity():" << str.capacity() << std::endl;
-    std::cout << "ss.str().capacity():" << ss.str().capacity() << std::endl;
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < 10; i++) {
-      ss << "Hello world" << std::endl;
-      std::cout << i << ":" << ss.str().capacity() << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("t1-t0: %d", t1 - t0);
-  }
-#endif
-
-#if 0
-  {
-    std::stringstream ss;
-    for (int i = 0; i < 10; i++) {
-      const int t0 = esp_timer_get_time();
-      ss << "Hello world" << std::endl;
-      const int t1 = esp_timer_get_time();
-      APP_LOGI("i: %d t1-t0: %d", i, t1 - t0);
-    }
-  }
-#endif
-
-#if 0
-  {
-    const int N = 1000;
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < N; i++) {
-      std::stringstream ss;
-      ss << 123 << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("time: %d", (t1 - t0) / N);
-  }
-  {
-    const int N = 1000;
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < N; i++) {
-      std::stringstream ss;
-      ss << 1.23f << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("time: %d", (t1 - t0) / N);
-  }
-  {
-    const int N = 1000
-    const int t0 = esp_timer_get_time();
-    for (int i = 0; i < N; i++) {
-      std::stringstream ss;
-      ss << 1.23 << std::endl;
-    }
-    const int t1 = esp_timer_get_time();
-    APP_LOGI("time: %d", (t1 - t0) / N);
-  }
-#endif
-
-#if 0
-  {
-    std::string s;
-    for (int i = 0; i < 10; i++) {
-      const int t0 = esp_timer_get_time();
-      s += "Hello world ";
-      const int t1 = esp_timer_get_time();
-      APP_LOGI("i: %d t1-t0: %d cap: %d", i, t1 - t0, (int)s.capacity());
-    }
-  }
-  {
-    std::string s;
-    s.reserve(1000);
-    for (int i = 0; i < 10; i++) {
-      const int t0 = esp_timer_get_time();
-      s += "Hello world ";
-      const int t1 = esp_timer_get_time();
-      APP_LOGI("i: %d t1-t0: %d", i, t1 - t0);
-    }
-  }
-#endif
-
-#if 0
-  {
-    char str[256];
-    int t0, t1;
-    const int N = 1000;
-
-    for (int i = 0; i < N; i++) {
-      t0 = esp_timer_get_time();
-      snprintf(str, sizeof(str), "%f", (double)1.23f);
-      t1 = esp_timer_get_time();
-    }
-    APP_LOGI("time: %d", t1 - t0);
-
-    for (int i = 0; i < N; i++) {
-      t0 = esp_timer_get_time();
-      snprintf(str, sizeof(str), "%f", 1.23);
-      t1 = esp_timer_get_time();
-    }
-    APP_LOGI("time: %d", t1 - t0);
-  }
-#endif
-
-#if 0
-  {
-    char str[256];
-    int t0, t1;
-    const int N = 1000;
-
-    for (int i = 0; i < N; i++) {
-      t0 = esp_timer_get_time();
-      snprintf(str, sizeof(str), "%d.%06d", t0 / 1000000, t0 % 1000000);
-      t1 = esp_timer_get_time();
-    }
-    APP_LOGI("time: %d", t1 - t0);
-
-    for (int i = 0; i < N; i++) {
-      t0 = esp_timer_get_time();
-      const auto res = std::div(t0, 1000000);
-      snprintf(str, sizeof(str), "%d.%06d", res.quot, res.rem);
-      t1 = esp_timer_get_time();
-    }
-    APP_LOGI("time: %d", t1 - t0);
-
-    for (int i = 0; i < N; i++) {
-      t0 = esp_timer_get_time();
-      snprintf(str, sizeof(str), "%f", t0 / 1000000.0);
-      t1 = esp_timer_get_time();
-    }
-    APP_LOGI("time: %d", t1 - t0);
-  }
-#endif
-
-#if 0
-  setlocale(LC_NUMERIC, ""); // no effect at all
-  printf("%'d\n", 1000000);
-#endif
+  // spiffs_test();
+  reflector_test();
 
   APP_LOG_DUMP();
   vTaskDelay(portMAX_DELAY);

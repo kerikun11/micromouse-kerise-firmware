@@ -26,8 +26,12 @@
 #include "hardware/hardware.h"
 #include "supporters/supporters.h"
 
-/* ログ */
-// #define MA_LOG_LEVEL 4
+/* 設定 */
+#define MOVE_ACTION_WALL_FIX_COMB_ENABLED 0  //< 櫛の壁制御
+#define MOVE_ACTION_WALL_FIX_DIAG_ENABLED 0  //< 斜めの壁制御
+#define MOVE_ACTION_WALL_CUT_ENABLED 0       //< 壁切れ補正
+
+/* ログマクロの定義 (MA_LOG_LEVEL は config.h で定義) */
 #if MA_LOG_LEVEL >= 1
 #define MA_LOGE APP_LOGE
 #else
@@ -275,10 +279,11 @@ class MoveAction {
   bool front_wall_attach(bool force = false) {
     if (is_break_state()) return false;
     /* 強制モードのときは1マス先の壁でも補正 */
-    if (force && hw->tof->getDistance() > field::SegWidthFull * 4 / 3)
+    if (force && hw->tof->getDistance() > field::kCellLengthAlong * 4 / 3)
       return false;
     /* 通常モードのときは1マス以内 */
-    if (!force && hw->tof->getDistance() > field::SegWidthFull) return false;
+    if (!force && hw->tof->getDistance() > field::kCellLengthAlong)
+      return false;
     /* wall_attach start */
     bool result = false;
     hw->led->set(6);
@@ -291,11 +296,11 @@ class MoveAction {
       WheelParameter wp;
       for (int j = 0; j < 2; ++j) {
         wp.wheel[j] =
-            sp->wd->distance_average.front[j] * model::front_wall_attach_gain;
+            sp->wd->distance_average.front[j] * model::wall_front_attach_gain;
       }
       const ctrl::Polar p = wp.toPolar(model::RotationRadius);
       /* 終了条件 */
-      const float end = model::front_wall_attach_end;
+      const float end = model::wall_front_attach_end;
       if (math_utils::sum_of_square(wp.wheel[0], wp.wheel[1]) < end) {
         result = true;  //< 補正成功
         break;
@@ -338,7 +343,7 @@ class MoveAction {
     const auto p_g = offset + p.rotate(offset.th);  //< グローバル位置
     const float d_tof_g = p_g.rotate(-p_g.th).x + d_tof;  //< 壁距離(グローバル)
     /* 基準となる前壁距離 (グローバル) */
-    const float d_ref_g = math_utils::round2(d_tof_g, field::SegWidthFull);
+    const float d_ref_g = math_utils::round2(d_tof_g, field::kCellLengthAlong);
     /* 前壁の距離誤差 */
     const float x_diff = d_ref_g - d_tof_g;
     /* 壁の有無の判断 */
@@ -372,7 +377,8 @@ class MoveAction {
     /* グローバル位置に変換 */
     const auto p_g = offset + p.rotate(offset.th);  //< グローバル位置
     const float y_g = p_g.rotate(-th_g_w).y;        //< グローバル横位置
-    const float y_w = math_utils::round2(y_g, field::SegWidthFull);  //< 内側
+    const float y_w =
+        math_utils::round2(y_g, field::kCellLengthAlong);  //< 内側
     const float y_in = std::abs(y_g - y_w);  //< 内側の柱との距離 (30mm 基準)
     /* 壁との距離を取得 */
     for (int i = 0; i < 2; i++) {
@@ -419,9 +425,9 @@ class MoveAction {
       /* 機体姿勢の補正 (壁に寄り続けている→姿勢を補正) */
       if (rp.side_wall_fix_theta_enabled)
         sp->sc->fix_pose({0, 0, y_error * model::wall_fix_theta_gain});
-#if 0
+#if MOVE_ACTION_WALL_FIX_COMB_ENABLED
       /* 櫛の壁制御 (KERISE v5) */
-      if (hw->tof->getDistance() > field::SegWidthFull * 3 / 2) {
+      if (hw->tof->getDistance() > field::kCellLengthAlong * 3 / 2) {
         const float comb_threashold = model::wall_comb_threshold;
         const float comb_shift = 0.1f;
         if (sp->wd->distance.front[0] < comb_threashold) {
@@ -437,9 +443,9 @@ class MoveAction {
       }
 #endif
     }
-#if 1
+#if MOVE_ACTION_WALL_FIX_DIAG_ENABLED
     /* 斜めの壁制御 */
-    if (isDiag() && remain > field::SegWidthFull / 3) {
+    if (isDiag() && remain > field::kCellLengthAlong / 3) {
       const float alpha = 0.1;          //< 補正割合 (0: 補正なし)
       const float wall_dist_ref = -12;  //< 大きく：補正強く
       if (sp->wd->distance.side[0] < wall_dist_ref) {
@@ -457,6 +463,7 @@ class MoveAction {
     hw->led->set(led_flags);
   }
   void side_wall_cut(const RunParameter& rp, wall_cut_data_t& wall_cut_data) {
+#if MOVE_ACTION_WALL_CUT_ENABLED
     if (!rp.side_wall_cut_enabled || isDiag()) return;
     /* 左右それぞれ */
     for (int i = 0; i < 2; i++) {
@@ -480,7 +487,7 @@ class MoveAction {
         // const float wall_cut_offset = -15; /*< 大きいほど前へ */
         // const float x_abs = offset.rotate(offset.th).x + sp->sc->est_p.x;
         // const float x_abs_cut =
-        //     math_utils::round2(x_abs, field::SegWidthFull);
+        //     math_utils::round2(x_abs, field::kCellLengthAlong);
         // const float fixed_x = x_abs_cut - x_abs + wall_cut_offset;
         // const float fixed_x_abs = std::abs(fixed_x);
         // const float alpha = 0.1f;
@@ -490,6 +497,7 @@ class MoveAction {
       }
       wall_cut_data.prev_wall[i] = wall;
     }
+#endif
   }
   void straight_x(const float distance, float v_max, float v_end,
                   const RunParameter& rp, bool unknown_accel = false) {
@@ -525,11 +533,13 @@ class MoveAction {
         if (isAlong() && hw->tof->isValid()) {
           const float tof_mm = hw->tof->getDistance();
           /* 衝突被害軽減ブレーキ (AEBS) */
-          if (remain > field::SegWidthFull && tof_mm < field::SegWidthFull)
+          if (remain > field::kCellLengthAlong &&
+              tof_mm < field::kCellLengthAlong)
             wall_stop_aebs();
-          if (v_end > 1 && tof_mm < field::SegWidthFull / 2) wall_stop_aebs();
+          if (v_end > 1 && tof_mm < field::kCellLengthAlong / 2)
+            wall_stop_aebs();
           /* 未知区間加速の緊急キャンセル */
-          if (unknown_accel && tof_mm < 1.8f * field::SegWidthFull) {
+          if (unknown_accel && tof_mm < 1.8f * field::kCellLengthAlong) {
             unknown_accel = false;
             trajectory.reset(rp.j_max, rp.a_max, rp.v_search, sp->sc->ref_v.tra,
                              rp.v_search, remain, sp->sc->est_p.x, t);
@@ -688,9 +698,9 @@ class MoveAction {
     hw->mt->free();
     sp->sc->sampling_wait();
     sp->sc->enable();  //< this resets est_p
-    sp->sc->update_pose({model::TailLength + field::WallThickness / 2});
-    offset = ctrl::Pose(field::SegWidthFull / 2, 0, PI / 2);
-    straight_x(field::SegWidthFull, rp.v_search, rp.v_search, rp);
+    sp->sc->update_pose({model::TailLength + field::kWallThickness / 2});
+    offset = ctrl::Pose(field::kCellLengthAlong / 2, 0, PI / 2);
+    straight_x(field::kCellLengthAlong, rp.v_search, rp.v_search, rp);
   }
   void start_init() {
     if (is_break_state()) return;
@@ -722,6 +732,7 @@ class MoveAction {
 
  private:
   utils::concurrent_queue<MazeLib::RobotBase::SearchAction> sa_queue;
+  static constexpr float PI = 3.14159265358979323846f;
 
   void search_run_task() {
     const auto& rp = rp_search;
@@ -729,7 +740,8 @@ class MoveAction {
     sp->sc->enable();
     MA_LOG_POSE;
     /* とりあえず区画の中心に配置 */
-    offset = ctrl::Pose(field::SegWidthFull / 2, field::SegWidthFull / 2);
+    offset =
+        ctrl::Pose(field::kCellLengthAlong / 2, field::kCellLengthAlong / 2);
     while (1) {
       /* 離脱確認 */
       if (is_break_state()) break;
@@ -820,7 +832,7 @@ class MoveAction {
     if (is_break_state()) return;
     const bool no_front_front_wall =
         hw->tof->getDistance() >
-        field::SegWidthFull * 2 + field::SegWidthFull / 2;
+        field::kCellLengthAlong * 2 + field::kCellLengthAlong / 2;
     const bool unknown_accel = rp.unknown_accel_enabled &&
                                continue_straight_if_no_front_wall &&
                                no_front_front_wall;
@@ -835,21 +847,21 @@ class MoveAction {
         start_init();
         break;
       case MazeLib::RobotBase::SearchAction::ST_FULL:
-        if (hw->tof->getDistance() < field::SegWidthFull)
+        if (hw->tof->getDistance() < field::kCellLengthAlong)
           return wall_stop_aebs();
-        straight_x(field::SegWidthFull, v_s, v_s, rp, unknown_accel);
+        straight_x(field::kCellLengthAlong, v_s, v_s, rp, unknown_accel);
         break;
       case MazeLib::RobotBase::SearchAction::ST_HALF:
-        straight_x(field::SegWidthFull / 2, v_s, v_s, rp);
+        straight_x(field::kCellLengthAlong / 2, v_s, v_s, rp);
         break;
       case MazeLib::RobotBase::SearchAction::TURN_L:
         if (sp->sc->est_p.x > 5.0f || sp->sc->ref_v.tra > v_s * 1.2f ||
             (sp->wd->walls.front &&
-             std::abs(hw->tof->getDistance() - field::SegWidthFull) > 20)) {
-          straight_x(field::SegWidthFull / 2, v_s, 0, rp);
+             std::abs(hw->tof->getDistance() - field::kCellLengthAlong) > 20)) {
+          straight_x(field::kCellLengthAlong / 2, v_s, 0, rp);
           front_wall_attach();
           turn(PI / 2);
-          straight_x(field::SegWidthFull / 2, v_s, v_s, rp);
+          straight_x(field::kCellLengthAlong / 2, v_s, v_s, rp);
         } else {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 0);
@@ -862,11 +874,11 @@ class MoveAction {
       case MazeLib::RobotBase::SearchAction::TURN_R:
         if (sp->sc->est_p.x > 5.0f || sp->sc->ref_v.tra > v_s * 1.2f ||
             (sp->wd->walls.front &&
-             std::abs(hw->tof->getDistance() - field::SegWidthFull) > 20)) {
-          straight_x(field::SegWidthFull / 2, v_s, 0, rp);
+             std::abs(hw->tof->getDistance() - field::kCellLengthAlong) > 20)) {
+          straight_x(field::kCellLengthAlong / 2, v_s, 0, rp);
           front_wall_attach();
           turn(-PI / 2);
-          straight_x(field::SegWidthFull / 2, v_s, v_s, rp);
+          straight_x(field::kCellLengthAlong / 2, v_s, v_s, rp);
         } else {
           static ctrl::slalom::Trajectory st(
               field::shapes[field::ShapeIndex::S90], 1);
@@ -880,7 +892,7 @@ class MoveAction {
         u_turn();
         break;
       case MazeLib::RobotBase::SearchAction::ST_HALF_STOP:
-        straight_x(field::SegWidthFull / 2, v_s, 0, rp);
+        straight_x(field::kCellLengthAlong / 2, v_s, 0, rp);
         break;
     }
   }
@@ -908,11 +920,11 @@ class MoveAction {
     /* 走行開始 */
     sp->sc->enable();
     /* 初期位置を設定 */
-    offset = ctrl::Pose(field::SegWidthFull / 2,
-                        model::TailLength + field::WallThickness / 2, PI / 2);
+    offset = ctrl::Pose(field::kCellLengthAlong / 2,
+                        model::TailLength + field::kWallThickness / 2, PI / 2);
     /* 最初の直線を追加 */
-    float straight =
-        field::SegWidthFull / 2 - model::TailLength - field::WallThickness / 2;
+    float straight = field::kCellLengthAlong / 2 - model::TailLength -
+                     field::kWallThickness / 2;
     /* 走行 */
     for (int path_index = 0; path_index < path.length(); path_index++) {
       if (is_break_state()) break;
@@ -989,13 +1001,13 @@ class MoveAction {
         SlalomProcess(field::ShapeIndex::F180, 1, 0, straight, rp);
         break;
       case MazeLib::RobotBase::FastAction::F_ST_FULL:
-        straight += field::SegWidthFull;
+        straight += field::kCellLengthAlong;
         break;
       case MazeLib::RobotBase::FastAction::F_ST_HALF:
-        straight += field::SegWidthFull / 2;
+        straight += field::kCellLengthAlong / 2;
         break;
       case MazeLib::RobotBase::FastAction::F_ST_DIAG:
-        straight += field::SegWidthDiag / 2;
+        straight += field::kCellLengthDiag / 2;
         break;
       default:
         break;
@@ -1053,8 +1065,9 @@ class MoveAction {
     sp->sc->reset();
     turn(2 * PI * min_i / table_size);
     /* 壁が遠い場合は直進する */
-    if (hw->tof->isValid() && hw->tof->getDistance() > field::SegWidthFull / 2)
-      straight_x(hw->tof->getDistance() - field::SegWidthFull / 2, 240, 0,
+    if (hw->tof->isValid() &&
+        hw->tof->getDistance() > field::kCellLengthAlong / 2)
+      straight_x(hw->tof->getDistance() - field::kCellLengthAlong / 2, 240, 0,
                  rp_search);
     /* 前壁補正 */
     front_wall_attach(true);
@@ -1063,7 +1076,7 @@ class MoveAction {
                                                              : -PI / 2);
     /* 壁のない方向を向く */
     while (!hw->mt->is_emergency()) {
-      if (hw->tof->getDistance() > field::SegWidthFull) break;
+      if (hw->tof->getDistance() > field::kCellLengthAlong) break;
       front_wall_attach(true);
       turn(-PI / 2);
     }

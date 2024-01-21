@@ -146,12 +146,14 @@ class Encoder {
         for (int i = 0; i < 2; i++) {
           ma_[i]->update();
           pulses_raw_[i] = ma_[i]->get();
+#if 0
           /* compensate eccentricity */
           pulses_raw_[i] += ec_gain[i] * pulses_size_ *
                                 std::sin(2 * PI *
                                          (float(pulses_raw_[i]) / pulses_size_ +
                                           ec_phase[i])) +
                             ec_offset[i];
+#endif
         }
       } break;
       default:

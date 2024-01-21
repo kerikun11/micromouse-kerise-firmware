@@ -42,7 +42,7 @@ using namespace MazeLib;
 #define MAZE_GOAL MAZE_GOAL_TEST
 #endif
 
-/* ログ */
+/* ログマクロの定義 (MR_LOG_LEVEL は config.h で定義) */
 #if MR_LOG_LEVEL >= 1
 #define MR_LOGE APP_LOGE
 #else

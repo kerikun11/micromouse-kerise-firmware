@@ -15,16 +15,13 @@
 class UserInterface {
  public:
   /* UI パラメータ */
-  static constexpr float thr_accel = 3 * 9807; /**< 加速度の閾値 */
-  static constexpr float thr_gyro = 4 * PI;    /**< 角速度の閾値 */
+  static constexpr float PI = 3.14159265358979323846f;
   static constexpr float wait_ms = 200; /**< チャタリング防止時間 */
-  static constexpr int thr_ref_front = 2400; /**< 前壁センサの閾値 */
-  static constexpr int thr_ref_side = 2400;  /**< 横壁センサの閾値 */
-  static constexpr float enc_interval_mm =
-      10.0f; /**< エンコーダのカウント間隔 */
+  static constexpr float thr_accel = 3 * 9807;    /**< 加速度の閾値 */
+  static constexpr float thr_gyro = 4 * PI;       /**< 角速度の閾値 */
+  static constexpr float enc_interval_mm = 10.0f; /**< エンコーダの間隔 */
   static constexpr int wait_fix_ms = 1000; /**< 静止待機の最小静止時間 */
-  static constexpr float thr_fix_gyro =
-      0.01f * PI; /**< 静止待機の角速度の閾値 */
+  static constexpr float thr_fix_gyro = 0.01f * PI; /**< 静止角速度の閾値 */
   static constexpr float thr_gyro_pickup = PI; /**< 回収角速度の閾値 */
 
  private:
@@ -100,6 +97,34 @@ class UserInterface {
         hw_->bz->play(hardware::Buzzer::CANCEL);
         return -1;
       }
+      /* UART */
+      int c = getchar();
+      if (c != EOF) {
+        switch (c) {
+          case 'n':
+            value += 1;
+            value %= range;
+            hw_->led->set(value);
+            hw_->bz->play(hardware::Buzzer::SELECT);
+            APP_LOGI("value: %d", value);
+            break;
+          case 'p':
+            value += range - 1;
+            value %= range;
+            hw_->led->set(value);
+            hw_->bz->play(hardware::Buzzer::SELECT);
+            APP_LOGI("value: %d", value);
+            break;
+          case 'c':
+            hw_->bz->play(hardware::Buzzer::CANCEL);
+            vTaskDelay(pdMS_TO_TICKS(wait_ms));
+            APP_LOGI("cancel");
+            return -1;
+          case '\n':
+            hw_->bz->play(hardware::Buzzer::CONFIRM);
+            return value;
+        }
+      }
     }
   }
   /**
@@ -117,13 +142,13 @@ class UserInterface {
     while (1) {
       vTaskDelay(pdMS_TO_TICKS(1));
       /* CONFIRM */
-      if (!side && hw_->rfl->front(0) > thr_ref_front &&
-          hw_->rfl->front(1) > thr_ref_front) {
+      if (!side && hw_->rfl->front(0) > model::ui_thr_ref_front &&
+          hw_->rfl->front(1) > model::ui_thr_ref_front) {
         hw_->bz->play(hardware::Buzzer::CONFIRM);
         return true;
       }
-      if (side && hw_->rfl->side(0) > thr_ref_side &&
-          hw_->rfl->side(1) > thr_ref_side) {
+      if (side && hw_->rfl->side(0) > model::ui_thr_ref_side &&
+          hw_->rfl->side(1) > model::ui_thr_ref_side) {
         hw_->bz->play(hardware::Buzzer::CONFIRM);
         return true;
       }

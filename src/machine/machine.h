@@ -68,7 +68,7 @@ class Machine {
         // Machine::petit_con();
         // Machine::encoder_test();
         // Machine::accel_test();
-        // Machine::front_wall_attach_test();
+        // Machine::wall_front_attach_test();
         // Machine::position_recovery();
         // Machine::wall_test();
         Machine::motor_test();
@@ -481,7 +481,7 @@ class Machine {
       hw->mt->drive(-0.1f, -0.1f);
       vTaskDelay(pdMS_TO_TICKS(200));
       /* config */
-      float dist = 90 * cells - (model::TailLength + field::WallThickness / 2);
+      float dist = 90 * cells - (model::TailLength + field::kWallThickness / 2);
       ctrl::AccelDesigner ad;
       ad.reset(120'000, 3'000, 720, 0, 30, dist);
       /* start */
@@ -511,7 +511,7 @@ class Machine {
     const float j_max = 240'000;
     const float a_max = 9000;
     const float v_max = 600;
-    const float dist = field::SegWidthFull * cells;
+    const float dist = field::kCellLengthAlong * cells;
     enum LOG_SELECT log_select = LOG_WALL;
     /* prepare */
     log_init(log_select);
@@ -696,7 +696,7 @@ class Machine {
     sp->ui->waitForCover(true);
     hw->mt->free();
   }
-  void front_wall_attach_test() {
+  void wall_front_attach_test() {
     while (1) {
       /* 開始待ち */
       if (!sp->ui->waitForCover(true)) return;
@@ -715,11 +715,11 @@ class Machine {
         WheelParameter wp;
         for (int j = 0; j < 2; ++j) {
           wp.wheel[j] =
-              sp->wd->distance_average.front[j] * model::front_wall_attach_gain;
+              sp->wd->distance_average.front[j] * model::wall_front_attach_gain;
         }
         const ctrl::Polar p = wp.toPolar(model::RotationRadius);
         /* 終了条件 */
-        const float end = model::front_wall_attach_end;
+        const float end = model::wall_front_attach_end;
         if (math_utils::sum_of_square(wp.wheel[0], wp.wheel[1]) < end) {
           result = true;  //< 補正成功
           break;
@@ -820,6 +820,7 @@ class Machine {
  private:
   freertospp::Task<Machine> task_drive;
   freertospp::Task<Machine> task_print;
+  static constexpr float PI = 3.14159265358979323846f;
 
   /* Hardware */
   hardware::Hardware* hw = nullptr;

@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "config/config.h"  //< KERISE_SELECT
+
 class Logger {
  public:
   Logger() {}
@@ -25,10 +27,9 @@ class Logger {
   void push(const std::vector<float>& data) { buf_.push_back(data); }
   void print() const {
     if (buf_.empty()) return;
-    /* header */
-    std::printf("# KERISE v%d\n", KERISE_SELECT);
-    /* labels_ */
-    std::printf("# ");
+    /* show header */
+    std::printf("# KERISE v%d Build: %s\n", KERISE_SELECT, __DATE__);
+    /* show labels */
     for (int i = 0; i < labels_.size(); ++i) {
       std::printf("%s", labels_[i].c_str());
       if (i < labels_.size() - 1) std::printf("\t");

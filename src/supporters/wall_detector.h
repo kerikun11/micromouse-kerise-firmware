@@ -68,7 +68,10 @@ class WallDetector {
   Walls walls;
 
  public:
-  WallDetector(hardware::Hardware* hw) : hw_(hw) {}
+  WallDetector(hardware::Hardware* hw) : hw_(hw) {
+    ref2dist_log_gain_ = -model::ref_max_length_mm /
+                         std::log2(float(model::ref_saturation_value));
+  }
   bool init() {
     if (!restore()) return false;
     xTaskCreatePinnedToCore(
@@ -137,8 +140,12 @@ class WallDetector {
   const char* get_info() {
     static char str[128];
     snprintf(str, sizeof(str),
-             "Dist:[%5.1f %5.1f %5.1f %5.1f] Wall:[%c %c %c] "
-             "ToF:[%3u mm %3lu ms (%3u mm)]",
+             "R[%4d %4d %4d %4d] "
+             "D[%5.1f %5.1f %5.1f %5.1f] "
+             "W[%c %c %c] "
+             "T[%3u mm %3lu ms (%3u mm)]",
+             hw_->rfl->side(0), hw_->rfl->front(0),  //
+             hw_->rfl->front(1), hw_->rfl->side(1),  //
              (double)distance.side[0], (double)distance.front[0],
              (double)distance.front[1], (double)distance.side[1],
              walls.side[0] ? 'X' : '_', walls.front ? 'X' : '_',
@@ -157,6 +164,7 @@ class WallDetector {
   hardware::Hardware* hw_;
   WallValue wall_ref;
   ctrl::Accumulator<WallValue, average_filter_size> buffer;
+  float ref2dist_log_gain_;
   // ToDo: add mutex
 
   void task() {
@@ -194,6 +202,6 @@ class WallDetector {
     }
   }
   float ref2dist(const int16_t value) const {
-    return -12.9035f * std::log(float(value)) + 86.7561f;
+    return ref2dist_log_gain_ * std::log2(float(value));
   }
 };

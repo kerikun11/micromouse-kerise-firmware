@@ -9,23 +9,23 @@
 #include <esp_timer.h>  //< esp_timer_get_time
 #include <stdio.h>      //< for printf
 
-#include "config/config.h"  //< for APP_LOG_LEVEL, APP_LOG_MEM_MODE
+#include "config/config.h"  //< for APP_LOG_LEVEL, APP_LOG_MEM_MODE_ENABLED
 
 /* app log mode */
-#ifndef APP_LOG_MEM_MODE
-#define APP_LOG_MEM_MODE 0
+#ifndef APP_LOG_MEM_MODE_ENABLED
+#define APP_LOG_MEM_MODE_ENABLED 0
 #endif
 
 /* app log level (0: None, 1: Error, 2: Warn, 3: Info, 4: Debug) */
 #ifndef APP_LOG_LEVEL
-#define APP_LOG_LEVEL 2
+#define APP_LOG_LEVEL 3
 #endif
 
 /* app log utils */
 #define APP_LOG_STRINGIFY(n) #n
 #define APP_LOG_TO_STRING(n) APP_LOG_STRINGIFY(n)
 /* app log base */
-#if APP_LOG_MEM_MODE
+#if APP_LOG_MEM_MODE_ENABLED
 /* app log mem */
 #define APP_LOG_BUFFER_SIZE 32768
 static int app_log_buffer_ptr = 0;
@@ -81,9 +81,9 @@ static char app_log_buffer[APP_LOG_BUFFER_SIZE];
 #endif
 
 /* show warning */
-#if APP_LOG_LEVEL > 3
-#warning "APP_LOGD Enabled"
+#if APP_LOG_LEVEL >= 4
+#warning "APP_LOGD is Enabled"
 #endif
-#if APP_LOG_MEM_MODE
-#warning "APP_LOG_MEM_MODE is enabled"
+#if APP_LOG_MEM_MODE_ENABLED
+#warning "APP_LOG_MEM_MODE_ENABLED is Enabled"
 #endif

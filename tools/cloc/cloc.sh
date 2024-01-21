@@ -1,2 +1,6 @@
 #!/bin/sh
-cloc --git src lib/ctrl/include lib/maze/include lib/maze/src
+cloc --git \
+    lib/ctrl/include \
+    lib/maze/include \
+    lib/maze/src \
+    src

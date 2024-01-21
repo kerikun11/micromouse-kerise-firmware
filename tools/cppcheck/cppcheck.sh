@@ -7,4 +7,7 @@ cppcheck --quiet --enable=all --suppressions-list=$(dirname $0)/suppressions.txt
     --platform=unix32 \
     -i build \
     --inline-suppr \
-    src lib
+    lib/ctrl/include \
+    lib/maze/include \
+    lib/maze/src \
+    src

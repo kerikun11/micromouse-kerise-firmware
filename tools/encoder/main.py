@@ -5,8 +5,6 @@ import datetime
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import argparse
-from matplotlib.ticker import ScalarFormatter
 # from scipy.ndimage import gaussian_filter1d
 
 # %% serial import

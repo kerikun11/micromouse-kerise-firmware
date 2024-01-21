@@ -415,10 +415,10 @@ class Machine {
             (float)hw->rfl->front(0),
             (float)hw->rfl->front(1),
             (float)hw->rfl->side(1),
-            (float)sp->wd->distance.side[0],
-            (float)sp->wd->distance.front[0],
-            (float)sp->wd->distance.front[1],
-            (float)sp->wd->distance.side[1],
+            (float)sp->wd->getWallDistanceSide(0),
+            (float)sp->wd->getWallDistanceFront(0),
+            (float)sp->wd->getWallDistanceFront(1),
+            (float)sp->wd->getWallDistanceSide(1),
             (float)hw->tof->getDistance(),
         });
     }
@@ -511,7 +511,7 @@ class Machine {
     const float j_max = 240'000;
     const float a_max = 9000;
     const float v_max = 600;
-    const float dist = field::kCellLengthAlong * cells;
+    const float dist = field::kCellLengthFull * cells;
     enum LOG_SELECT log_select = LOG_WALL;
     /* prepare */
     log_init(log_select);
@@ -714,8 +714,9 @@ class Machine {
         /* 差分計算 */
         WheelParameter wp;
         for (int j = 0; j < 2; ++j) {
-          wp.wheel[j] =
-              sp->wd->distance_average.front[j] * model::wall_front_attach_gain;
+          // ToDo: 本当に平滑化が必要か確認
+          wp.wheel[j] = sp->wd->getWallDistanceFrontAveraged(j) *
+                        model::wall_front_attach_gain;
         }
         const ctrl::Polar p = wp.toPolar(model::RotationRadius);
         /* 終了条件 */

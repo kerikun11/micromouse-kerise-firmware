@@ -10,7 +10,7 @@
 namespace field {
 
 /* Field Size Parameter */
-static constexpr float kCellLengthAlong = 90.0f;
+static constexpr float kCellLengthFull = 90.0f;
 static constexpr float kCellLengthDiag = 127.2792206135786f;
 static constexpr float kWallThickness = 6.0f;
 

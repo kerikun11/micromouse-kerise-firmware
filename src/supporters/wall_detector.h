@@ -18,8 +18,8 @@
 class WallDetector {
  public:
   static constexpr int average_filter_size = 16;
-  static constexpr int wall_threshold_front = 135;
-  static constexpr int wall_threshold_side = 25;
+  static constexpr int wall_threshold_front = 135;  //< ToF [mm]
+  static constexpr int wall_threshold_side = 25;    //< Reflector Dist [mm]
   static constexpr auto WALL_DETECTOR_BACKUP_PATH = "/spiffs/WallDetector.txt";
 
   union WallValue {
@@ -60,12 +60,6 @@ class WallDetector {
     };
     bool front;
   };
-
-  //  private:
- public:  //< ToDo: make private and lock with mutex
-  WallValue distance;
-  WallValue distance_average;
-  Walls walls;
 
  public:
   WallDetector(hardware::Hardware* hw) : hw_(hw) {
@@ -138,6 +132,7 @@ class WallDetector {
     hw_->tof->enable();
   }
   const char* get_info() {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
     static char str[128];
     snprintf(str, sizeof(str),
              "R[%4d %4d %4d %4d] "
@@ -146,27 +141,57 @@ class WallDetector {
              "T[%3u mm %3lu ms (%3u mm)]",
              hw_->rfl->side(0), hw_->rfl->front(0),  //
              hw_->rfl->front(1), hw_->rfl->side(1),  //
-             (double)distance.side[0], (double)distance.front[0],
-             (double)distance.front[1], (double)distance.side[1],
-             walls.side[0] ? 'X' : '_', walls.front ? 'X' : '_',
-             walls.side[1] ? 'X' : '_', hw_->tof->getDistance(),
+             (double)distance_.side[0], (double)distance_.front[0],
+             (double)distance_.front[1], (double)distance_.side[1],
+             walls_.side[0] ? 'X' : '_', walls_.front ? 'X' : '_',
+             walls_.side[1] ? 'X' : '_', hw_->tof->getDistance(),
              hw_->tof->passedTimeMs(), hw_->tof->getRangeRaw());
     return str;
   }
   void print() { APP_LOGI("%s", get_info()); }
   void csv() {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
     std::cout << "0";
-    for (int i = 0; i < 4; ++i) std::cout << "," << distance.value[i];
+    for (int i = 0; i < 4; ++i) std::cout << "," << distance_.value[i];
     std::cout << std::endl;
+  }
+  float getWallDistanceSide(int ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return distance_.side[ch];
+  }
+  float getWallDistanceFront(int ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return distance_.front[ch];
+  }
+  float getWallDistanceFrontAveraged(int ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return distance_average_.front[ch];
+  }
+  bool getWallFront() {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return walls_.front;
+  }
+  bool getWallSide(int ch) {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return walls_.side[ch];
+  }
+  auto getWalls() {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return walls_;
   }
 
  private:
   hardware::Hardware* hw_;
   WallValue wall_ref;
-  ctrl::Accumulator<WallValue, average_filter_size> buffer;
   float ref2dist_log_gain_;
-  // ToDo: add mutex
+  ctrl::Accumulator<WallValue, average_filter_size> buffer_;
 
+  std::mutex mutex_;
+  WallValue distance_;
+  WallValue distance_average_;
+  Walls walls_;
+
+ public:
   void task() {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
@@ -175,30 +200,33 @@ class WallDetector {
     }
   }
   void update() {
+    // Mutex Lock
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+
     // リフレクタ値の更新
     for (int i = 0; i < 2; i++) {
-      distance.side[i] = ref2dist(hw_->rfl->side(i)) - wall_ref.side[i];
-      distance.front[i] = ref2dist(hw_->rfl->front(i)) - wall_ref.front[i];
+      distance_.side[i] = ref2dist(hw_->rfl->side(i)) - wall_ref.side[i];
+      distance_.front[i] = ref2dist(hw_->rfl->front(i)) - wall_ref.front[i];
     }
-    buffer.push(distance);
-    distance_average = buffer.average();
+    buffer_.push(distance_);
+    distance_average_ = buffer_.average();
 
     // 前壁の更新
     int front_mm = hw_->tof->getDistance();
     if (!hw_->tof->isValid())
-      walls.front = false;  //< ToFの測距範囲内に壁がない場合はinvalidになる
+      walls_.front = false;  //< ToFの測距範囲内に壁がない場合はinvalidになる
     else if (front_mm < wall_threshold_front * 0.95f)
-      walls.front = true;
+      walls_.front = true;
     else if (front_mm > wall_threshold_front * 1.05f)
-      walls.front = false;
+      walls_.front = false;
 
     // 横壁の更新
     for (int i = 0; i < 2; i++) {
-      const float value = distance.side[i];
+      const float value = distance_.side[i];
       if (value < wall_threshold_side * 0.97f)
-        walls.side[i] = true;
+        walls_.side[i] = true;
       else if (value > wall_threshold_side * 1.03f)
-        walls.side[i] = false;
+        walls_.side[i] = false;
     }
   }
   float ref2dist(const int16_t value) const {

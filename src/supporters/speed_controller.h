@@ -108,7 +108,7 @@ class SpeedController {
   void task() {
     sampling_semaphore_.start_periodic(sampling_period_us);
     while (1) {
-      /* sync */
+      /* wait for sampling trigger */
       sampling_semaphore_.take();
       /* sampling start */
       hw_->sampling_request();

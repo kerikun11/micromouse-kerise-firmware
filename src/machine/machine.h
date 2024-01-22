@@ -712,7 +712,7 @@ class Machine {
         // if (is_break_state())
         //   break;
         /* 差分計算 */
-        WheelParameter wp;
+        WheelPosition wp;
         for (int j = 0; j < 2; ++j) {
           // ToDo: 本当に平滑化が必要か確認
           wp.wheel[j] = sp->wd->getWallDistanceFrontAveraged(j) *

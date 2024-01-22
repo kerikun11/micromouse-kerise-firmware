@@ -1,5 +1,5 @@
 /**
- * @file wheel_parameter.h
+ * @file wheel_position.h
  * @brief ホイールの回転量と並進・回転を相互変換する型を定義
  * @author Ryotaro Onuki <kerikun11+github@gmail.com>
  * @date 2022-03-13
@@ -9,13 +9,15 @@
 
 #include <ctrl/polar.h>
 
-struct WheelParameter {
+#include <array>
+
+struct WheelPosition {
  public:
   std::array<float, 2> wheel;  //< wheel position, wheel[0]:left, wheel[1]:right
 
  public:
-  WheelParameter() : wheel({0, 0}) {}
-  WheelParameter(const ctrl::Polar& polar, const float rotation_radius)
+  WheelPosition() : wheel({0, 0}) {}
+  WheelPosition(const ctrl::Polar& polar, const float rotation_radius)
       : wheel({{
             polar.tra - rotation_radius * polar.rot,
             polar.tra + rotation_radius * polar.rot,

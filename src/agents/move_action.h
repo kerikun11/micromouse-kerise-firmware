@@ -292,7 +292,7 @@ class MoveAction {
     for (int i = 0; i < 2000; i++) {
       if (is_break_state()) break;
       /* 差分計算 */
-      WheelParameter wp;
+      WheelPosition wp;
       for (int j = 0; j < 2; ++j) {
         wp.wheel[j] = sp->wd->getWallDistanceFrontAveraged(j) *
                       model::wall_front_attach_gain;

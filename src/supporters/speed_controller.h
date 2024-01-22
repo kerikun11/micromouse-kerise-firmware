@@ -15,7 +15,7 @@
 
 #include "hardware/hardware.h"
 #include "utils/timer_semaphore.h"
-#include "utils/wheel_parameter.h"
+#include "utils/wheel_position.h"
 
 class SpeedController {
  public:
@@ -131,7 +131,7 @@ class SpeedController {
       wheel_position[i].push(hw_->enc->get_position(i));
     accel.push({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
     /* calculate differential of encoder value */
-    WheelParameter wp;
+    WheelPosition wp;
     for (int i = 0; i < 2; i++)
       wp.wheel[i] = (wheel_position[i][0] - wheel_position[i][1]) / Ts;
     enc_v = wp.toPolar(model::RotationRadius);
@@ -156,9 +156,11 @@ class SpeedController {
   void drive() {
     /* calculate pwm value */
     const auto pwm_value = fbc_.update(ref_v, est_v, ref_a, est_a, Ts);
-    const float pwm_value_L = pwm_value.tra - pwm_value.rot / 2;
-    const float pwm_value_R = pwm_value.tra + pwm_value.rot / 2;
     /* drive the motors */
-    if (drive_enabled_) hw_->mt->drive(pwm_value_L, pwm_value_R);
+    if (drive_enabled_) {
+      const float pwm_value_L = pwm_value.tra - pwm_value.rot / 2;
+      const float pwm_value_R = pwm_value.tra + pwm_value.rot / 2;
+      hw_->mt->drive(pwm_value_L, pwm_value_R);
+    }
   }
 };

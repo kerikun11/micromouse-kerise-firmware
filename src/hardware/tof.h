@@ -55,29 +55,29 @@ class ToF {
   }
   void enable() { enabled_ = true; }
   void disable() { enabled_ = false; }
-  uint16_t getDistance() {
+  uint16_t getDistance() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return distance_;
   }
-  uint16_t getRangeRaw() {
+  uint16_t getRangeRaw() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return range_;
   }
-  uint32_t passedTimeMs() {
+  uint32_t passedTimeMs() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return passed_ms_;
   }
-  bool isValid() {
+  bool isValid() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return passed_ms_ < 30;
   }
   // const auto& getLog() const { return log_; }
-  void print() {
+  void print() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     APP_LOGI("range_: %3d [mm] D: %3d [mm] Dur: %3d [ms], Passed: %4lu [ms]",
              range_, distance_, dur_ms_, passed_ms_);
   }
-  void csv() {
+  void csv() const {
     std::printf("0,45,90,135,180,%d,%lu\n", getDistance(), passedTimeMs());
   }
 
@@ -87,7 +87,7 @@ class ToF {
   Parameter param_;
   bool enabled_ = true;
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   uint16_t distance_;
   uint16_t range_;
   uint16_t dur_ms_;

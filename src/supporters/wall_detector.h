@@ -131,7 +131,7 @@ class WallDetector {
              (double)wall_ref.front[1]);
     hw_->tof->enable();
   }
-  const char* get_info() {
+  const char* get_info() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     static char str[128];
     snprintf(str, sizeof(str),
@@ -148,34 +148,34 @@ class WallDetector {
              hw_->tof->passedTimeMs(), hw_->tof->getRangeRaw());
     return str;
   }
-  void print() { APP_LOGI("%s", get_info()); }
-  void csv() {
+  void print() const { APP_LOGI("%s", get_info()); }
+  void csv() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     std::cout << "0";
     for (int i = 0; i < 4; ++i) std::cout << "," << distance_.value[i];
     std::cout << std::endl;
   }
-  float getWallDistanceSide(int ch) {
+  float getWallDistanceSide(int ch) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return distance_.side[ch];
   }
-  float getWallDistanceFront(int ch) {
+  float getWallDistanceFront(int ch) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return distance_.front[ch];
   }
-  float getWallDistanceFrontAveraged(int ch) {
+  float getWallDistanceFrontAveraged(int ch) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return distance_average_.front[ch];
   }
-  bool getWallFront() {
+  bool getWallFront() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return walls_.front;
   }
-  bool getWallSide(int ch) {
+  bool getWallSide(int ch) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return walls_.side[ch];
   }
-  auto getWalls() {
+  auto getWalls() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return walls_;
   }
@@ -186,7 +186,7 @@ class WallDetector {
   float ref2dist_log_gain_;
   ctrl::Accumulator<WallValue, average_filter_size> buffer_;
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   WallValue distance_;
   WallValue distance_average_;
   Walls walls_;

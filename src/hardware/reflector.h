@@ -47,9 +47,9 @@ class Reflector {
         TASK_CORE_ID_REFLECTOR);
     return true;
   }
-  int16_t side(const uint8_t isRight) { return read(isRight ? 1 : 0); }
-  int16_t front(const uint8_t isRight) { return read(isRight ? 3 : 2); }
-  int16_t read(const int8_t ch) {
+  int16_t side(const uint8_t ch) const { return read(ch); }
+  int16_t front(const uint8_t ch) const { return read(ch + 2); }
+  int16_t read(const uint8_t ch) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return value_[ch];
   }
@@ -65,25 +65,25 @@ class Reflector {
  private:
   std::array<gpio_num_t, kNumChannels> gpio_nums_tx_;  //< 赤外線LEDのピン番号
   std::array<adc_channel_t, kNumChannels>
-      rx_channels_;    //< 赤外線センサのADC1_CHANNEL
-  TimerSemaphore ts_;  //< インターバル用タイマー
+      rx_channels_;                 //< 赤外線センサのADC1_CHANNEL
+  TimerSemaphore timer_semaphore_;  //< インターバル用タイマー
 
-  std::mutex mutex_;                         //< value用のMutex
+  mutable std::mutex mutex_;                 //< value用のMutex
   std::array<int16_t, kNumChannels> value_;  //< リフレクタの測定値 SL SR FL FR
 
   void task() {
-    ts_.start_periodic(kSamplingPeriodMicroSeconds);
+    timer_semaphore_.start_periodic(kSamplingPeriodMicroSeconds);
     while (1) {
       for (int i : {2, 1, 0, 3}) {  //< FL SR SL FR
-        ts_.take();                 //< 干渉防止のウエイト
+        timer_semaphore_.take();    //< 干渉防止のウエイト
         // Sampling
         int offset = peripheral::ADC::read_raw(rx_channels_[i]);  //< ADC取得
-        gpio_set_level(gpio_nums_tx_[i], 1);                   //< 放電開始
-        int raw = peripheral::ADC::read_raw(rx_channels_[i]);  //< ADC取得
-        gpio_set_level(gpio_nums_tx_[i], 0);                   //< 充電開始
+        gpio_set_level(gpio_nums_tx_[i], 1);                    //< 放電開始
+        int peak = peripheral::ADC::read_raw(rx_channels_[i]);  //< ADC取得
+        gpio_set_level(gpio_nums_tx_[i], 0);                    //< 充電開始
         // Calculation
-        int diff = raw - offset;  //< オフセットとの差をとる
-        if (diff < 1) diff = 1;   //< 0以下にならないように1で飽和
+        int diff = peak - offset;  //< オフセットとの差をとる
+        if (diff < 1) diff = 1;    //< 0以下にならないように1で飽和
         // Result
         std::lock_guard<std::mutex> lock_guard(mutex_);  //< lock value
         value_[i] = diff;

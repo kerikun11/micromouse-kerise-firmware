@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "app_log.h"
+#include "utils/wheel_position.h"
 
 namespace hardware {
 
@@ -82,6 +83,10 @@ class Encoder {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return positions_[ch];
   }
+  WheelPosition get_wheel_position() {
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return {{positions_[0], positions_[1]}};
+  }
   void clear_offset() {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     pulses_ovf_[0] = pulses_ovf_[1] = 0;
@@ -105,12 +110,12 @@ class Encoder {
   int pulses_size_;
   freertospp::Semaphore sampling_end_semaphore_;
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
+  WheelPosition positions_;
   int pulses_[2] = {};
   int pulses_raw_[2] = {};
   int pulses_prev_[2] = {};
   int pulses_ovf_[2] = {};
-  float positions_[2] = {};
 
   const float ec_gain[2] = {
       9.5e-3f,

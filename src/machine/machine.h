@@ -715,13 +715,13 @@ class Machine {
         WheelPosition wp;
         for (int j = 0; j < 2; ++j) {
           // ToDo: 本当に平滑化が必要か確認
-          wp.wheel[j] = sp->wd->getWallDistanceFrontAveraged(j) *
-                        model::wall_front_attach_gain;
+          wp[j] = sp->wd->getWallDistanceFrontAveraged(j) *
+                  model::wall_front_attach_gain;
         }
         const ctrl::Polar p = wp.toPolar(model::RotationRadius);
         /* 終了条件 */
         const float end = model::wall_front_attach_end;
-        if (math_utils::sum_of_square(wp.wheel[0], wp.wheel[1]) < end) {
+        if (math_utils::sum_of_square(wp[0], wp[1]) < end) {
           result = true;  //< 補正成功
           break;
         }

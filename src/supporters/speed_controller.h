@@ -31,7 +31,7 @@ class SpeedController {
   ctrl::Polar est_a;
   ctrl::Polar enc_v;
   ctrl::Pose est_p;
-  ctrl::Accumulator<float, kAccumulateSize> wheel_position[2];
+  ctrl::Accumulator<WheelPosition, kAccumulateSize> wheel_position;
   ctrl::Accumulator<ctrl::Polar, kAccumulateSize> accel;
 
  public:
@@ -55,8 +55,7 @@ class SpeedController {
       est_a.clear();
       est_p.clear();
       enc_v.clear();
-      for (int i = 0; i < 2; i++)
-        wheel_position[i].clear(hw_->enc->get_position(i));
+      wheel_position.clear(hw_->enc->get_wheel_position());
       accel.clear({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
       fbc_.reset();
     }
@@ -103,7 +102,7 @@ class SpeedController {
   bool drive_enabled_ = false;
   freertospp::Semaphore data_ready_semaphore_;
   TimerSemaphore sampling_semaphore_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 
   void task() {
     sampling_semaphore_.start_periodic(sampling_period_us);
@@ -127,13 +126,10 @@ class SpeedController {
   }
   void update_estimator() {
     /* add new samples */
-    for (int i = 0; i < 2; i++)
-      wheel_position[i].push(hw_->enc->get_position(i));
+    wheel_position.push(hw_->enc->get_wheel_position());
     accel.push({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
     /* calculate differential of encoder value */
-    WheelPosition wp;
-    for (int i = 0; i < 2; i++)
-      wp.wheel[i] = (wheel_position[i][0] - wheel_position[i][1]) / Ts;
+    WheelPosition wp = (wheel_position[0] - wheel_position[1]) / Ts;
     enc_v = wp.toPolar(model::RotationRadius);
     /* calculate estimated velocity value with complementary filter */
     const ctrl::Polar v_low = ctrl::Polar(enc_v.tra, hw_->imu->get_gyro());

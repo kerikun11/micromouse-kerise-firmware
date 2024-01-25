@@ -11,21 +11,31 @@
 
 #include <array>
 
-struct WheelPosition {
+struct WheelPosition : public std::array<float, 2> {
  public:
-  std::array<float, 2> wheel;  //< wheel position, wheel[0]:left, wheel[1]:right
-
- public:
-  WheelPosition() : wheel({0, 0}) {}
+  WheelPosition() : std::array<float, 2>({0, 0}) {}
+  WheelPosition(const std::array<float, 2>& o) : std::array<float, 2>(o) {}
   WheelPosition(const ctrl::Polar& polar, const float rotation_radius)
-      : wheel({{
+      : std::array<float, 2>({{
             polar.tra - rotation_radius * polar.rot,
             polar.tra + rotation_radius * polar.rot,
         }}) {}
-  const ctrl::Polar toPolar(const float rotation_radius) {
+  ctrl::Polar toPolar(const float rotation_radius) const {
     return ctrl::Polar{
-        (wheel[1] + wheel[0]) / 2,
-        (wheel[1] - wheel[0]) / 2 / rotation_radius,
+        ((*this)[1] + (*this)[0]) / 2,
+        ((*this)[1] - (*this)[0]) / 2 / rotation_radius,
     };
+  }
+  WheelPosition operator+(const WheelPosition& o) const {
+    return {{(*this)[0] + o[0], (*this)[1] + o[1]}};
+  }
+  WheelPosition operator-(const WheelPosition& o) const {
+    return {{(*this)[0] - o[0], (*this)[1] - o[1]}};
+  }
+  WheelPosition operator*(const float k) const {
+    return {{k * (*this)[0], k * (*this)[1]}};
+  }
+  WheelPosition operator/(const float k) const {
+    return {{(*this)[0] / k, (*this)[1] / k}};
   }
 };

@@ -7,10 +7,12 @@
  */
 #pragma once
 
+#include <driver/gpio.h>
 #include <drivers/icm20602/icm20602.h>
 #include <freertospp/semphr.h>
 
 #include <condition_variable>
+#include <iostream>  //< for std::cout
 #include <mutex>
 #include <vector>
 
@@ -69,45 +71,45 @@ class IMU {
   void sampling_wait(TickType_t xBlockTime = portMAX_DELAY) const {
     sampling_end_semaphore_.take(xBlockTime);
   }
-  void print() {
+  void print() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     APP_LOGI("gy %10f %10f %10f ac: %10f %10f %10f aa: %10f",       //
              (double)gyro_.x, (double)gyro_.y, (double)gyro_.z,     //
              (double)accel_.x, (double)accel_.y, (double)accel_.z,  //
              (double)angular_accel_);
   }
-  void csv() {
+  void csv(std::ostream& os = std::cout) const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
-    std::cout << "0";
-    std::cout << '\t' << gyro_.x;
-    std::cout << '\t' << gyro_.y;
-    std::cout << '\t' << gyro_.z;
+    os << "0";
+    os << '\t' << gyro_.x;
+    os << '\t' << gyro_.y;
+    os << '\t' << gyro_.z;
 #if 1
     for (int i = 0; i < icm_.size(); ++i) {
-      std::cout << '\t' << raw_gyro_[i].x;
-      std::cout << '\t' << raw_gyro_[i].y;
-      std::cout << '\t' << raw_gyro_[i].z;
+      os << '\t' << raw_gyro_[i].x;
+      os << '\t' << raw_gyro_[i].y;
+      os << '\t' << raw_gyro_[i].z;
     }
 #endif
-    std::cout << std::endl;
+    os << std::endl;
   }
-  float get_accel() {
+  float get_accel() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return accel_.y;
   }
-  float get_gyro() {
+  float get_gyro() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return gyro_.z;
   }
-  float get_angular_accel() {
+  float get_angular_accel() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return angular_accel_;
   }
-  const MotionParameter get_gyro3() {
+  const MotionParameter get_gyro3() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return gyro_;
   }
-  const MotionParameter get_accel3() {
+  const MotionParameter get_accel3() const {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     return accel_;
   }
@@ -118,7 +120,7 @@ class IMU {
   std::vector<MotionParameter> raw_gyro_, raw_accel_;
   float rotation_radius_ = 0;
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   MotionParameter gyro_, accel_;
   float angular_accel_ = 0;
   uint64_t last_timestamp_us_ = 0;

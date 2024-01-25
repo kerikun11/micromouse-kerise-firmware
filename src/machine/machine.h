@@ -793,8 +793,10 @@ class Machine {
     /* Others */
     lgr = new Logger();
     /* start tasks */
-    task_drive.start(this, &Machine::drive, "Drive", 4096, 2, tskNO_AFFINITY);
-    task_print.start(this, &Machine::print, "Print", 4096, 1, tskNO_AFFINITY);
+    task_drive.start(this, &Machine::drive, "Drive", 4096, TASK_PRIORITY_DRIVE,
+                     TASK_CORE_ID_DRIVE);
+    task_print.start(this, &Machine::print, "Print", 4096, TASK_PRIORITY_PRINT,
+                     TASK_CORE_ID_PRINT);
     /* Ending */
     return result;
   }

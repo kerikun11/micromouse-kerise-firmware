@@ -35,6 +35,7 @@ class OneMotor {
         .resolution_hz = pwm_resolution_hz,
         .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
         .period_ticks = pwm_ticks_,
+        .intr_priority = 0,
         .flags{
             .update_period_on_empty = 0,
             .update_period_on_sync = 0,
@@ -45,6 +46,7 @@ class OneMotor {
     mcpwm_oper_handle_t oper = NULL;
     mcpwm_operator_config_t operator_config = {
         .group_id = mcpwm_group_id,
+        .intr_priority = 0,
         .flags{
             .update_gen_action_on_tez = 0,
             .update_gen_action_on_tep = 0,
@@ -58,11 +60,14 @@ class OneMotor {
     /* connect */
     ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper, timer));
     /* comparator */
-    mcpwm_comparator_config_t comparator_config = {.flags{
-        .update_cmp_on_tez = 0,
-        .update_cmp_on_tep = 0,
-        .update_cmp_on_sync = 0,
-    }};
+    mcpwm_comparator_config_t comparator_config = {
+        .intr_priority = 0,
+        .flags{
+            .update_cmp_on_tez = 0,
+            .update_cmp_on_tep = 0,
+            .update_cmp_on_sync = 0,
+        },
+    };
     ESP_ERROR_CHECK(
         mcpwm_new_comparator(oper, &comparator_config, &cmpr_handle_[0]));
     ESP_ERROR_CHECK(

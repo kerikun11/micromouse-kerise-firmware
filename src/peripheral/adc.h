@@ -19,6 +19,7 @@ class ADC {
   static bool init() {
     adc_oneshot_unit_init_cfg_t init_config1 = {
         .unit_id = ADC_UNIT_1,
+        .clk_src = ADC_RTC_CLK_SRC_DEFAULT,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, &adc1_handle));
@@ -48,6 +49,5 @@ class ADC {
  private:
   static const int DEFAULT_VREF = 1100;
   static adc_oneshot_unit_handle_t adc1_handle;
-};
-
+};  // namespace peripheral
 };  // namespace peripheral

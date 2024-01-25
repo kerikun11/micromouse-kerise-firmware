@@ -37,10 +37,9 @@ class Hardware {
   Hardware() {}
   bool init() {
     /* pullup all the pins of the SPI-CS so that the bus is not blocked */
-    for (auto p : CONFIG_SPI_CS_PINS) {
-      gpio_reset_pin(p);
-      gpio_set_direction(p, GPIO_MODE_INPUT);
-      gpio_pullup_en(p);
+    for (const auto pin : CONFIG_SPI_CS_PINS) {
+      ESP_ERROR_CHECK(gpio_reset_pin(pin));
+      ESP_ERROR_CHECK(gpio_pullup_en(pin));
     }
 
     /* Buzzer (initialize first to notify errors by sound) */

@@ -34,9 +34,8 @@ filename = 'data/' + datetime_string + '.csv'
 
 
 # %% file import
-filename = 'v5/trap.csv'
+filename = 'data/KERISEv5/trap.csv'
 
-# raw = np.loadtxt(filename, delimiter=',')
 raw = np.loadtxt(filename, delimiter='\t')
 print(raw.shape)
 

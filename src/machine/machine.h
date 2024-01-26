@@ -7,8 +7,6 @@
  */
 #pragma once
 
-#include <soc/rtc.h>
-
 #include "agents/maze_robot.h"
 #include "config/config.h"
 #include "freertospp/task.h"
@@ -23,60 +21,44 @@ class Machine {
     int mode = sp->ui->waitForSelect(16);
     switch (mode) {
       case 0: /* 探索・最短を含む通常の自律走行 */
-        Machine::driveNormally();
-        break;
+        return Machine::driveNormally();
       case 1: /* パラメータの相対設定 */
-        Machine::selectParamManually();
-        break;
+        return Machine::selectParamManually();
       case 2: /* パラメータの絶対設定 */
-        Machine::selectParamPreset();
-        break;
+        return Machine::selectParamPreset();
       case 3: /* 走行設定 */
-        Machine::selectRunConfig();
-        break;
+        return Machine::selectRunConfig();
       case 4: /* ファン設定 */
-        Machine::selectFanGain();
-        break;
+        return Machine::selectFanGain();
       case 5: /* 迷路データ・探索状態の復元・削除 */
-        Machine::selectMazeData();
-        break;
+        return Machine::selectMazeData();
       case 6: /* ゴール区画の設定 */
-        Machine::setGoalPositions();
-        break;
+        return Machine::setGoalPositions();
       case 7: /* 宴会芸 */
-        Machine::partyStunt();
-        break;
+        return Machine::partyStunt();
       case 8: /* 壁センサキャリブレーション */
-        Machine::wallCalibration();
-        break;
-      case 9: /* 壁センサのリアルタイム表示 */
-        Machine::print_wall_detector();
-        break;
+        return Machine::wallCalibration();
+      case 9: /* タイヤ径の測定 */
+        return Machine::wheel_diameter_measurement();
       case 10: /* リセット */
-        esp_restart();
-        break;
-      case 11: /* タイヤ径の測定 */
-        Machine::wheel_diameter_measurement();
-        break;
-      case 12: /* システム同定 */
-        Machine::sysid();
-        break;
-      case 13:
-        Machine::slalom_test();
-        break;
+        return esp_restart();
+      case 11: /* システム同定 */
+        return Machine::sysid();
+      case 12: /* エンコーダ */
+        return Machine::encoder_test();
+      case 13: /* スラローム */
+        return Machine::slalom_test();
       case 14:
-        // Machine::petit_con();
-        // Machine::encoder_test();
-        // Machine::accel_test();
-        // Machine::wall_front_attach_test();
-        // Machine::position_recovery();
-        // Machine::wall_test();
-        Machine::motor_test();
-        break;
+        return Machine::motor_test();
+        // return Machine::wall_test();
+        // return Machine::petit_con();
+        // return Machine::accel_test();
+        // return Machine::wall_front_attach_test();
+        // return Machine::position_recovery();
       case 15: /* ログの表示 */
         lgr->print();
         APP_LOG_DUMP();
-        break;
+        return;
     }
   }
   void driveAutomatically() {
@@ -258,7 +240,7 @@ class Machine {
     hw->bz->play(hardware::Buzzer::CANCEL);
   }
   void wallCalibration() {
-    int mode = sp->ui->waitForSelect(3);
+    int mode = sp->ui->waitForSelect(4);
     switch (mode) {
       /* 前壁補正データの保存 */
       case 0:
@@ -287,6 +269,9 @@ class Machine {
         hw->bz->play(hardware::Buzzer::CONFIRM);
         sp->wd->calibration_front();
         hw->bz->play(hardware::Buzzer::CANCEL);
+        break;
+      case 3: /* 壁センサのリアルタイム表示 */
+        Machine::print_wall_detector();
         break;
     }
   }
@@ -336,6 +321,42 @@ class Machine {
     ma->waitForEndAction();
     ma->disable();
     ma->emergency_release();
+  }
+  void wheel_diameter_measurement() {
+    int cells = sp->ui->waitForSelect(16);
+    if (cells < 0) return;
+    cells = (cells == 0) ? 8 : cells;  //< default is 8 cells straight
+    while (1) {
+      /* wait for start */
+      if (!sp->ui->waitForCover()) return;
+      vTaskDelay(pdMS_TO_TICKS(500));
+      /* calibration */
+      hw->bz->play(hardware::Buzzer::CALIBRATION);
+      hw->imu->calibration();
+      /* put back */
+      hw->mt->drive(-0.1f, -0.1f);
+      vTaskDelay(pdMS_TO_TICKS(200));
+      /* config */
+      float dist = 90 * cells - (model::TailLength + field::kWallThickness / 2);
+      ctrl::AccelDesigner ad;
+      ad.reset(120'000, 3'000, 720, 0, 30, dist);
+      /* start */
+      sp->sc->enable();  //< includes position reset
+      for (float t = 0; !hw->mt->is_emergency(); t += 1e-3f) {
+        sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
+        sp->sc->sampling_wait();
+        if (sp->sc->est_p.x > dist) break;
+      }
+      /* stop statically */
+      sp->sc->set_target(0, 0);
+      vTaskDelay(pdMS_TO_TICKS(100));
+      sp->sc->disable();
+      if (hw->mt->is_emergency())
+        hw->mt->emergency_release(), hw->bz->play(hardware::Buzzer::EMERGENCY);
+      hw->bz->play(hardware::Buzzer::CANCEL);
+      /* wait for next */
+      if (sp->ui->waitForSelect(1) < 0) return;
+    }
   }
 
  private:
@@ -429,25 +450,8 @@ class Machine {
     if (gain < 0) return;
     if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lgr->init({
-        "enc[0]",
-        "enc[1]",
-        "gyro.z",
-        "accel.y",
-        "angular_accel",
-        "u.tra",
-        "u.rot",
-        "battery_voltage",
-    });
-    const auto push_log = [&]() {
-      const auto& bd = sp->sc->getFeedbackController().getBreakdown();
-      lgr->push({
-          hw->enc->get_position(0), hw->enc->get_position(1),
-          hw->imu->get_gyro(), hw->imu->get_accel(),
-          hw->imu->get_angular_accel(), bd.u.tra, bd.u.rot,
-          // sp->ui->getBatteryVoltage(),
-      });
-    };
+    enum LOG_SELECT log_select = LOG_WALL;
+    log_init(log_select);
     hw->bz->play(hardware::Buzzer::CALIBRATION);
     hw->imu->calibration();
     // hw->fan->drive(0.5);
@@ -459,48 +463,22 @@ class Machine {
       hw->mt->drive(gain * 0.1f, gain * 0.1f);  //< 並進
     for (int i = 0; i < 2000; i++) {
       sp->sc->sampling_wait();
-      push_log();
+      log_push(log_select);
     }
     hw->fan->drive(0);
     hw->mt->drive(0, 0);
     vTaskDelay(pdMS_TO_TICKS(500));
     hw->mt->free();
   }
-  void wheel_diameter_measurement() {
-    int cells = sp->ui->waitForSelect(16);
-    if (cells < 0) return;
-    cells = (cells == 0) ? 8 : cells;  //< default is 8 cells straight
-    while (1) {
-      /* wait for start */
-      if (!sp->ui->waitForCover()) return;
-      vTaskDelay(pdMS_TO_TICKS(500));
-      /* calibration */
-      hw->bz->play(hardware::Buzzer::CALIBRATION);
-      hw->imu->calibration();
-      /* put back */
-      hw->mt->drive(-0.1f, -0.1f);
-      vTaskDelay(pdMS_TO_TICKS(200));
-      /* config */
-      float dist = 90 * cells - (model::TailLength + field::kWallThickness / 2);
-      ctrl::AccelDesigner ad;
-      ad.reset(120'000, 3'000, 720, 0, 30, dist);
-      /* start */
-      sp->sc->enable();  //< includes position reset
-      for (float t = 0; !hw->mt->is_emergency(); t += 1e-3f) {
-        sp->sc->set_target(ad.v(t), 0, ad.a(t), 0);
-        sp->sc->sampling_wait();
-        if (sp->sc->est_p.x > dist) break;
-      }
-      /* stop statically */
-      sp->sc->set_target(0, 0);
-      vTaskDelay(pdMS_TO_TICKS(100));
-      sp->sc->disable();
-      if (hw->mt->is_emergency())
-        hw->mt->emergency_release(), hw->bz->play(hardware::Buzzer::EMERGENCY);
-      hw->bz->play(hardware::Buzzer::CANCEL);
-      /* wait for next */
-      if (sp->ui->waitForSelect(1) < 0) return;
-    }
+  void encoder_test() {
+    int value = sp->ui->waitForSelect(16);
+    hw->led->set(15);
+    if (!sp->ui->waitForCover()) return;
+    vTaskDelay(pdMS_TO_TICKS(500));
+    float pwm = 0.05f * value;
+    hw->mt->drive(pwm, pwm);
+    sp->ui->waitForCover(true);
+    hw->mt->free();
   }
   void wall_test() {
     int cells = sp->ui->waitForSelect(16);
@@ -587,9 +565,7 @@ class Machine {
     vTaskDelay(pdMS_TO_TICKS(500));
     enum LOG_SELECT log_select = LOG_PID;
     log_init(log_select);
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->enc->clear_offset();
-    hw->imu->calibration();
+    hw->calibration();
     /* parameter */
     const auto& shape = field::shapes[field::ShapeIndex::F180];
     const bool mirror = mode;
@@ -685,16 +661,6 @@ class Machine {
     sp->ui->waitForCover();
     hw->mt->free();
     hw->bz->play(hardware::Buzzer::CANCEL);
-  }
-  void encoder_test() {
-    int value = sp->ui->waitForSelect(16);
-    hw->led->set(15);
-    if (!sp->ui->waitForCover()) return;
-    vTaskDelay(pdMS_TO_TICKS(500));
-    float pwm = 0.05f * value;
-    hw->mt->drive(pwm, pwm);
-    sp->ui->waitForCover(true);
-    hw->mt->free();
   }
   void wall_front_attach_test() {
     while (1) {

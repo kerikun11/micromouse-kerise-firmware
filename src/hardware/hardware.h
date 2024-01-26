@@ -113,6 +113,11 @@ class Hardware {
     imu->sampling_wait();
     enc->sampling_wait();
   }
+  void calibration() {
+    bz->play(hardware::Buzzer::CALIBRATION);
+    imu->calibration();
+    enc->clear_offset();
+  }
 
   /**
    * @brief Sample the Battery Voltage

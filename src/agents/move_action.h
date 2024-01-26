@@ -202,9 +202,7 @@ class MoveAction {
   }
   void calibration() {
     MA_LOGI("");
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->enc->clear_offset();
-    hw->imu->calibration();
+    hw->calibration();
   }
   void set_unknown_accel_flag(const bool flag) {
     continue_straight_if_no_front_wall = flag;

@@ -122,7 +122,7 @@ files = args.files
 # if no file is specified, import from serial
 if not files:
     datetime_string = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    filename = 'data/' + datetime_string + '.csv'
+    filename = 'data/' + datetime_string + '/' + datetime_string + '.csv'
     serial_import(filename, args.port, args.baud)
     files.append(filename)
 

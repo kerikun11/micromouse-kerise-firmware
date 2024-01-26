@@ -86,8 +86,8 @@ static constexpr float wall_front_attach_end = 0.4f;
 static constexpr float wall_avoid_alpha = 0.05f;
 static constexpr float wall_fix_theta_gain = 1e-8f;
 static constexpr float wall_comb_threshold = 54;
-static constexpr float ref_max_length_mm = 45;  //< リフレクタの最大計測距離
-static constexpr float ref_saturation_value = 3100;  //< リフレクタの飽和値
+static constexpr float ref_max_length_mm = 90;  //< リフレクタの最大計測距離
+static constexpr float ref_saturation_value = 3600;  //< リフレクタの飽和値
 /* Model */
 static constexpr ctrl::FeedbackController<ctrl::Polar>::Model
     SpeedControllerModel = {
@@ -134,8 +134,8 @@ static constexpr float wall_front_attach_end = 0.1f;
 static constexpr float wall_avoid_alpha = 0.05f;
 static constexpr float wall_fix_theta_gain = 1e-7f;
 static constexpr float wall_comb_threshold = 54;
-static constexpr float ref_max_length_mm = 45;  //< リフレクタの最大計測距離
-static constexpr float ref_saturation_value = 3100;  //< リフレクタの飽和値
+static constexpr float ref_max_length_mm = 90;  //< リフレクタの最大計測距離
+static constexpr float ref_saturation_value = 3600;  //< リフレクタの飽和値
 /* Model */
 static constexpr ctrl::FeedbackController<ctrl::Polar>::Model
     SpeedControllerModel = {
@@ -182,8 +182,8 @@ static constexpr float wall_front_attach_end = 0.1f;
 static constexpr float wall_avoid_alpha = 0.05f;
 static constexpr float wall_fix_theta_gain = 1e-7f;
 static constexpr float wall_comb_threshold = 80;
-static constexpr float ref_max_length_mm = 45;  //< リフレクタの最大計測距離
-static constexpr float ref_saturation_value = 3100;  //< リフレクタの飽和値
+static constexpr float ref_max_length_mm = 90;  //< リフレクタの最大計測距離
+static constexpr float ref_saturation_value = 3600;  //< リフレクタの飽和値
 /* Model */
 static constexpr ctrl::FeedbackController<ctrl::Polar>::Model
     SpeedControllerModel = {

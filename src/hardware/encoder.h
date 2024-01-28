@@ -33,6 +33,8 @@ class Encoder {
     std::vector<gpio_num_t> gpio_nums_spi_cs;
     float gear_ratio;
     float wheel_diameter;
+    std::array<float, 2> ec_gain = {0, 0};
+    std::array<float, 2> ec_phase = {0, 0};
   };
 
  private:
@@ -72,12 +74,12 @@ class Encoder {
         TASK_CORE_ID_ENCODER);
     return true;
   }
-  int get_raw(uint8_t ch) {
+  int get_pulses(uint8_t ch) {
     /* the reason the type of pulses_ is no problem with type int */
     /* estimated position 1,000 [mm/s] * 10 [min] * 60 [s/min] = 600,000 [mm] */
     /* int32_t 2,147,483,647 / 16384 * 1/3 * 3.1415 * 13 [mm] = 1,784,305 [mm]*/
     std::lock_guard<std::mutex> lock_guard(mutex_);
-    return pulses_raw_[ch];
+    return pulses_[ch];
   }
   float get_position(uint8_t ch) {
     std::lock_guard<std::mutex> lock_guard(mutex_);
@@ -117,19 +119,6 @@ class Encoder {
   int pulses_prev_[2] = {};
   int pulses_ovf_[2] = {};
 
-  const float ec_gain[2] = {
-      9.5e-3f,
-      8.0e-3f,
-  };
-  const float ec_phase[2] = {
-      0.5f - 0.1e-1f,
-      0.5f - 9.9e-1f,
-  };
-  const float ec_offset[2] = {
-      -9.7732187836986f,
-      8.23007897574619f,
-  };
-
   void task() {
     while (1) {
       /* sync */
@@ -151,14 +140,6 @@ class Encoder {
         for (int i = 0; i < 2; i++) {
           ma_[i]->update();
           pulses_raw_[i] = ma_[i]->get();
-#if 0
-          /* compensate eccentricity */
-          pulses_raw_[i] += ec_gain[i] * pulses_size_ *
-                                std::sin(2 * PI *
-                                         (float(pulses_raw_[i]) / pulses_size_ +
-                                          ec_phase[i])) +
-                            ec_offset[i];
-#endif
         }
       } break;
       default:
@@ -177,11 +158,17 @@ class Encoder {
         pulses_ovf_[i]++;
       }
       pulses_prev_[i] = pulses_raw_[i];
-      /* calculate position */
-      float SCALE_PULSES_TO_MM = param_.gear_ratio * param_.wheel_diameter * PI;
+      /* calculate pulses */
       pulses_[i] = pulses_ovf_[i] * pulses_size_ + pulses_raw_[i];
-      mm[i] = (pulses_ovf_[i] + float(pulses_raw_[i]) / pulses_size_) *
-              SCALE_PULSES_TO_MM;
+      /* calculate position */
+      float ec_offset =
+          param_.ec_gain[i] *
+          std::sin(2 * PI *
+                   (float(pulses_raw_[i]) / pulses_size_ + param_.ec_phase[i]));
+      float SCALE_PULSES_TO_MM = param_.gear_ratio * param_.wheel_diameter * PI;
+      mm[i] =
+          (pulses_ovf_[i] + float(pulses_raw_[i] + ec_offset) / pulses_size_) *
+          SCALE_PULSES_TO_MM;
     }
     /* fix rotation direction */
     switch (param_.sensor_type) {

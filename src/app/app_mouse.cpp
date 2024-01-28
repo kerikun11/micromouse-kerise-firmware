@@ -10,7 +10,6 @@ void app_mouse() {
            MOTOR_R_CTRL2_PIN,
            FAN_PIN,
        }) {
-    ESP_ERROR_CHECK(gpio_reset_pin(gpio_num));
     ESP_ERROR_CHECK(gpio_pulldown_en(gpio_num));
   }
   /* machine */

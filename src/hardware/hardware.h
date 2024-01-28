@@ -81,6 +81,8 @@ class Hardware {
         .gpio_nums_spi_cs = ENCODER_CS_PINS,
         .gear_ratio = model::GearRatio,
         .wheel_diameter = model::WheelDiameter,
+        .ec_gain = model::ec_gain,
+        .ec_phase = model::ec_phase,
     };
     if (!enc->init(encoder_parameter)) bz->play(hardware::Buzzer::ERROR);
     /* Reflector */

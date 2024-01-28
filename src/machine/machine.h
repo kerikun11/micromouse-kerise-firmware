@@ -227,8 +227,7 @@ class Machine {
   void partyStunt() {
     if (!sp->ui->waitForCover()) return;
     hw->led->set(6);
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
+    hw->calibration();
     hw->led->set(9);
     sp->sc->enable();
     sp->sc->set_target(0, 0);
@@ -317,6 +316,7 @@ class Machine {
     }
     path += "s";
     ma->set_fast_path(path);
+    hw->calibration();
     ma->enable(MoveAction::TaskActionFastRun);
     ma->waitForEndAction();
     ma->disable();
@@ -331,8 +331,7 @@ class Machine {
       if (!sp->ui->waitForCover()) return;
       vTaskDelay(pdMS_TO_TICKS(500));
       /* calibration */
-      hw->bz->play(hardware::Buzzer::CALIBRATION);
-      hw->imu->calibration();
+      hw->calibration();
       /* put back */
       hw->mt->drive(-0.1f, -0.1f);
       vTaskDelay(pdMS_TO_TICKS(200));
@@ -368,30 +367,36 @@ class Machine {
   void log_init(enum LOG_SELECT log_select) {
     switch (log_select) {
       case LOG_PID:
-        return lgr->init({
-            "ref_v.tra", "est_v.tra", "ref_a.tra", "est_a.tra", "ff.tra",
-            "fbp.tra",   "fbi.tra",   "fbd.tra",   "ref_v.rot", "est_v.rot",
-            "ref_a.rot", "est_a.rot", "ff.rot",    "fbp.rot",   "fbi.rot",
-            "fbd.rot",   "ref_q.x",   "est_q.x",   "ref_q.y",   "est_q.y",
-            "ref_q.th",  "est_q.th",
-        });
+        return lgr->init(
+            {
+                "ref_v.tra", "est_v.tra", "ref_a.tra", "est_a.tra", "ff.tra",
+                "fbp.tra",   "fbi.tra",   "fbd.tra",   "ref_v.rot", "est_v.rot",
+                "ref_a.rot", "est_a.rot", "ff.rot",    "fbp.rot",   "fbi.rot",
+                "fbd.rot",   "ref_q.x",   "est_q.x",   "ref_q.y",   "est_q.y",
+                "ref_q.th",  "est_q.th",
+            },
+            "PID");
       case LOG_SYSID:
-        return lgr->init({
-            "enc[0]",
-            "enc[1]",
-            "gyro.z",
-            "accel.y",
-            "angular_accel",
-            "u.tra",
-            "u.rot",
-        });
+        return lgr->init(
+            {
+                "enc_0",
+                "enc_1",
+                "gyro.z",
+                "accel.y",
+                "angular_accel",
+                "u.tra",
+                "u.rot",
+            },
+            "SYSID");
       case LOG_WALL:
-        return lgr->init({
-            "ref_v.tra", "est_v.tra", "ref_a.tra", "est_a.tra", "ref_q.x",
-            "est_q.x",   "ref_q.y",   "est_q.y",   "ref_q.th",  "est_q.th",
-            "ref_0",     "ref_1",     "ref_2",     "ref_3",     "wd_0",
-            "wd_1",      "wd_2",      "wd_3",      "tof",
-        });
+        return lgr->init(
+            {
+                "ref_v.tra", "est_v.tra", "ref_a.tra", "est_a.tra", "ref_q.x",
+                "est_q.x",   "ref_q.y",   "est_q.y",   "ref_q.th",  "est_q.th",
+                "ref_0",     "ref_1",     "ref_2",     "ref_3",     "wd_0",
+                "wd_1",      "wd_2",      "wd_3",      "tof",
+            },
+            "WALL");
     }
   }
   void log_push(enum LOG_SELECT log_select,
@@ -450,10 +455,9 @@ class Machine {
     if (gain < 0) return;
     if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(1000));
-    enum LOG_SELECT log_select = LOG_WALL;
+    enum LOG_SELECT log_select = LOG_SELECT::LOG_SYSID;
     log_init(log_select);
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
+    hw->calibration();
     // hw->fan->drive(0.5);
     vTaskDelay(pdMS_TO_TICKS(500));
     /* start */
@@ -472,12 +476,34 @@ class Machine {
   }
   void encoder_test() {
     int value = sp->ui->waitForSelect(16);
+    float pwm = 0.01f * value;
     hw->led->set(15);
     if (!sp->ui->waitForCover()) return;
     vTaskDelay(pdMS_TO_TICKS(500));
-    float pwm = 0.05f * value;
+    lgr->init(
+        {
+            "timestamp_us",
+            "enc_pulses_0",
+            "enc_pulses_1",
+            "enc_position_0",
+            "enc_position_1",
+        },
+        "pwm: " + std::to_string(pwm));
     hw->mt->drive(pwm, pwm);
-    sp->ui->waitForCover(true);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    hw->enc->clear_offset();
+    sp->sc->sampling_wait();
+    const uint32_t offset_us = esp_timer_get_time();
+    for (int i = 0; i < 1000; ++i) {
+      sp->sc->sampling_wait();
+      lgr->push({
+          (float)(sp->sc->timestamp_us - offset_us),
+          (float)hw->enc->get_pulses(0),
+          (float)hw->enc->get_pulses(1),
+          hw->enc->get_position(0),
+          hw->enc->get_position(1),
+      });
+    }
     hw->mt->free();
   }
   void wall_test() {
@@ -493,8 +519,7 @@ class Machine {
     enum LOG_SELECT log_select = LOG_WALL;
     /* prepare */
     log_init(log_select);
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
+    hw->calibration();
     ctrl::AccelDesigner ad;
     ad.reset(j_max, a_max, v_max, 0, 0, dist);
     /* start */
@@ -521,8 +546,7 @@ class Machine {
     vTaskDelay(pdMS_TO_TICKS(500));
     enum LOG_SELECT log_select = LOG_PID;
     log_init(log_select);
-    hw->bz->play(hardware::Buzzer::CALIBRATION);
-    hw->imu->calibration();
+    hw->calibration();
     hw->fan->drive(0.2);
     vTaskDelay(pdMS_TO_TICKS(500));
     ctrl::AccelDesigner ad;

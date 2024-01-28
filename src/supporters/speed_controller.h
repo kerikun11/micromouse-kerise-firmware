@@ -20,7 +20,6 @@
 class SpeedController {
  public:
   static constexpr const int sampling_period_us = 1000;
-  static constexpr const float Ts = sampling_period_us / 1e6f;
   static constexpr const int kAccumulateSize = 4;
 
  public:  // ToDo: make private
@@ -33,6 +32,8 @@ class SpeedController {
   ctrl::Pose est_p;
   ctrl::Accumulator<WheelPosition, kAccumulateSize> wheel_position;
   ctrl::Accumulator<ctrl::Polar, kAccumulateSize> accel;
+  uint32_t timestamp_us;
+  float Ts;
 
  public:
   SpeedController(hardware::Hardware* hw)
@@ -74,7 +75,7 @@ class SpeedController {
   void set_target(float v_tra, float v_rot, float a_tra = 0, float a_rot = 0) {
     std::lock_guard<std::mutex> lock_guard(mutex_);
     ref_v.tra = v_tra, ref_v.rot = v_rot, ref_a.tra = a_tra, ref_a.rot = a_rot;
-    drive();
+    drive(0);
   }
   void update_pose(const ctrl::Pose& new_pose) {
     std::lock_guard<std::mutex> lock_guard(mutex_);
@@ -105,26 +106,37 @@ class SpeedController {
   mutable std::mutex mutex_;
 
   void task() {
-    sampling_semaphore_.start_periodic(sampling_period_us);
+    // sampling_semaphore_.start_periodic(sampling_period_us);
+    // while (1) {
+    //   /* wait for sampling trigger */
+    //   sampling_semaphore_.take();
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    uint32_t timestamp_us_prev = 0;
     while (1) {
       /* wait for sampling trigger */
-      sampling_semaphore_.take();
+      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
       /* sampling start */
       hw_->sampling_request();
-      /* wait for sampling finished */
       hw_->sampling_wait();
       /* lock data */
       std::lock_guard<std::mutex> lock_guard(mutex_);
+      /* update timestamp */
+      timestamp_us = esp_timer_get_time();
+      uint32_t timestamp_diff_us = timestamp_us_prev == 0
+                                       ? sampling_period_us
+                                       : (timestamp_us - timestamp_us_prev);
+      timestamp_us_prev = timestamp_us;
+      Ts = timestamp_diff_us * 1e-6f;
       /* update data */
-      update_estimator();
-      update_odometry();
+      update_estimator(Ts);
+      update_odometry(Ts);
       /* PID control */
-      drive();
+      drive(Ts);
       /* notify */
       data_ready_semaphore_.give();
     }
   }
-  void update_estimator() {
+  void update_estimator(const float Ts) {
     /* add new samples */
     wheel_position.push(hw_->enc->get_wheel_position());
     accel.push({hw_->imu->get_accel(), hw_->imu->get_angular_accel()});
@@ -139,7 +151,7 @@ class SpeedController {
     /* estimated acceleration */
     est_a = accel[0];
   }
-  void update_odometry() {
+  void update_odometry(const float Ts) {
     /* estimates slip angle */
     // const float k = 0.01f;
     const float k = 0.0f;
@@ -149,7 +161,7 @@ class SpeedController {
     est_p.x += enc_v.tra * std::cos(est_p.th + slip_angle) * Ts;
     est_p.y += enc_v.tra * std::sin(est_p.th + slip_angle) * Ts;
   }
-  void drive() {
+  void drive(const float Ts) {
     /* calculate pwm value */
     const auto pwm_value = fbc_.update(ref_v, est_v, ref_a, est_a, Ts);
     /* drive the motors */

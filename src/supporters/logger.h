@@ -20,15 +20,18 @@ class Logger {
  public:
   Logger() {}
   void clear() { buf_.clear(); }
-  void init(const std::vector<std::string>& labels) {
+  void init(const std::vector<std::string>& labels,
+            const std::string& comment) {
     labels_ = labels;
+    comment_ = comment;
     clear();
   }
   void push(const std::vector<float>& data) { buf_.push_back(data); }
   void print() const {
     if (buf_.empty()) return;
     /* show header */
-    std::printf("# KERISE v%d Build: %s\n", KERISE_SELECT, __DATE__);
+    std::printf("# KERISE v%d Build: %s %s Comment: %s\n", KERISE_SELECT,
+                __DATE__, __TIME__, comment_.c_str());
     /* show labels */
     for (int i = 0; i < labels_.size(); ++i) {
       std::printf("%s", labels_[i].c_str());
@@ -38,7 +41,7 @@ class Logger {
     /* data */
     for (const auto& data : buf_) {
       for (int i = 0; i < data.size(); ++i) {
-        std::printf("%.3e", (double)data[i]);  //< printf supports only double
+        std::printf("%e", (double)data[i]);  //< printf supports only double
         if (i < data.size() - 1) std::printf("\t");
       }
       std::printf("\n");
@@ -49,4 +52,5 @@ class Logger {
  private:
   std::vector<std::vector<float>> buf_;
   std::vector<std::string> labels_;
+  std::string comment_;
 };

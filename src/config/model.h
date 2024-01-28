@@ -25,6 +25,10 @@ static constexpr float WheelDiameter = 12.72f;  //< 径を大きく：進行距�
 static constexpr float CenterOffsetY = 0.0f;
 static constexpr float TailLength = 18.0f;
 static constexpr float IMURotationRadius = 12.0f;
+static constexpr std::array<float, 2> ec_gain = {196.32743977216478,
+                                                 80.15665223932199};
+static constexpr std::array<float, 2> ec_phase = {0.7992010012980393,
+                                                  0.3278987960529171};
 /* ToF */
 static constexpr float tof_raw_range_90 = 75;
 static constexpr float tof_raw_range_180 = 160;

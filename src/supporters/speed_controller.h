@@ -107,8 +107,8 @@ class SpeedController {
 
   void task() {
     uint32_t timestamp_us_prev = 0;
-#if 0
-    sampling_semaphore_.start_periodic(sampling_period_us);
+#if 1
+    sampling_semaphore_.startPeriodic(sampling_period_us);
     while (1) {
       /* wait for sampling trigger */
       sampling_semaphore_.take();
@@ -118,13 +118,13 @@ class SpeedController {
       /* wait for sampling trigger */
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
 #endif
+      timestamp_us = esp_timer_get_time();
       /* sampling start */
       hw_->sampling_request();
       hw_->sampling_wait();
       /* lock data */
       std::lock_guard<std::mutex> lock_guard(mutex_);
       /* update timestamp */
-      timestamp_us = esp_timer_get_time();
       uint32_t timestamp_diff_us = timestamp_us_prev == 0
                                        ? sampling_period_us
                                        : (timestamp_us - timestamp_us_prev);

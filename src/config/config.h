@@ -7,6 +7,8 @@
  */
 #pragma once
 
+#include <soc/soc.h>
+
 /* KERISE Select */
 #define KERISE_SELECT 6
 

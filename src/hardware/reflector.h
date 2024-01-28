@@ -10,7 +10,11 @@
 #include <driver/gpio.h>
 
 #include <array>
+#include <iostream>
+#include <mutex>
 
+#include "app_log.h"
+#include "config/config.h"
 #include "peripheral/adc.h"
 #include "utils/timer_semaphore.h"
 
@@ -38,7 +42,7 @@ class Reflector {
                                                 rx_channels_[i], &pin));
       ESP_ERROR_CHECK(gpio_reset_pin((gpio_num_t)pin));
       // value
-      value_[i] = 0;
+      value_[i] = 1;
     }
     const int stack_depth = 2048;
     xTaskCreatePinnedToCore(
@@ -72,10 +76,11 @@ class Reflector {
   std::array<int16_t, kNumChannels> value_;  //< リフレクタの測定値 SL SR FL FR
 
   void task() {
-    timer_semaphore_.start_periodic(kSamplingPeriodMicroSeconds);
+    timer_semaphore_.startPeriodic(kSamplingPeriodMicroSeconds);
     while (1) {
       for (int i : {2, 1, 0, 3}) {  //< FL SR SL FR
-        timer_semaphore_.take();    //< 干渉防止のウエイト
+        // Sync
+        timer_semaphore_.take();  //< 干渉防止のウエイト
         // Sampling
         int offset = peripheral::ADC::read_raw(rx_channels_[i]);  //< ADC取得
         gpio_set_level(gpio_nums_tx_[i], 1);                    //< 放電開始

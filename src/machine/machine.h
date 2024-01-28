@@ -44,17 +44,17 @@ class Machine {
         return esp_restart();
       case 11: /* システム同定 */
         return Machine::sysid();
-      case 12: /* エンコーダ */
+      case 12:
         return Machine::encoder_test();
-      case 13: /* スラローム */
+      case 13:
         return Machine::slalom_test();
       case 14:
-        return Machine::motor_test();
-        // return Machine::wall_test();
+        return Machine::wall_test();
         // return Machine::petit_con();
         // return Machine::accel_test();
         // return Machine::wall_front_attach_test();
         // return Machine::position_recovery();
+        // return Machine::show_tasks();
       case 15: /* ログの表示 */
         lgr->print();
         APP_LOG_DUMP();
@@ -241,8 +241,7 @@ class Machine {
   void wallCalibration() {
     int mode = sp->ui->waitForSelect(4);
     switch (mode) {
-      /* 前壁補正データの保存 */
-      case 0:
+      case 0: /* 前壁補正データの保存 */
         hw->led->set(15);
         if (!sp->ui->waitForCover()) return;
         if (sp->wd->backup()) {
@@ -251,8 +250,7 @@ class Machine {
           hw->bz->play(hardware::Buzzer::ERROR);
         }
         break;
-      /* 横壁キャリブレーション */
-      case 1:
+      case 1: /* 横壁キャリブレーション */
         hw->led->set(9);
         if (!sp->ui->waitForCover()) return;
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -260,8 +258,7 @@ class Machine {
         sp->wd->calibration_side();
         hw->bz->play(hardware::Buzzer::CANCEL);
         break;
-      /* 前壁キャリブレーション */
-      case 2:
+      case 2: /* 前壁キャリブレーション */
         hw->led->set(6);
         if (!sp->ui->waitForCover(true)) return;
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -675,17 +672,6 @@ class Machine {
       ma->emergency_release();
     }
   }
-  void motor_test() {
-    int value = sp->ui->waitForSelect(16);
-    if (value < 0) return;
-    if (!sp->ui->waitForCover(true)) return;
-    vTaskDelay(pdMS_TO_TICKS(500));
-    float duty = (value < 8 ? value : value - 16) * 0.1f;
-    hw->mt->drive(duty, duty);
-    sp->ui->waitForCover();
-    hw->mt->free();
-    hw->bz->play(hardware::Buzzer::CANCEL);
-  }
   void wall_front_attach_test() {
     while (1) {
       /* 開始待ち */
@@ -753,6 +739,17 @@ class Machine {
       return false;
     }
     return true;
+  }
+  void show_tasks() {
+    // CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID=y
+    // CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+    //   char msg_buffer[512];
+    //   APP_LOGI("vTaskList:");
+    //   vTaskList(msg_buffer);
+    //   puts(msg_buffer);
+    //   APP_LOGI("vTaskGetRunTimeStats:");
+    //   vTaskGetRunTimeStats(msg_buffer);
+    //   puts(msg_buffer);
   }
 
  public:

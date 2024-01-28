@@ -106,15 +106,18 @@ class SpeedController {
   mutable std::mutex mutex_;
 
   void task() {
-    // sampling_semaphore_.start_periodic(sampling_period_us);
-    // while (1) {
-    //   /* wait for sampling trigger */
-    //   sampling_semaphore_.take();
-    TickType_t xLastWakeTime = xTaskGetTickCount();
     uint32_t timestamp_us_prev = 0;
+#if 0
+    sampling_semaphore_.start_periodic(sampling_period_us);
+    while (1) {
+      /* wait for sampling trigger */
+      sampling_semaphore_.take();
+#else
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
       /* wait for sampling trigger */
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+#endif
       /* sampling start */
       hw_->sampling_request();
       hw_->sampling_wait();

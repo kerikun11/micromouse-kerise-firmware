@@ -492,7 +492,7 @@ class Machine {
     hw->mt->drive(pwm, pwm);
     vTaskDelay(pdMS_TO_TICKS(1000));
     hw->enc->clear_offset();
-    sp->sc->sampling_wait();
+    for (int i = 0; i < 2; ++i) sp->sc->sampling_wait();
     const uint32_t offset_us = esp_timer_get_time();
     for (int i = 0; i < 1000; ++i) {
       sp->sc->sampling_wait();

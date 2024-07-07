@@ -32,7 +32,7 @@ DOXYFILE_ENCODING = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME = "KERISE"
+PROJECT_NAME = "MicroMouse KERISE Firmware"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
@@ -91,7 +91,7 @@ ALLOW_UNICODE_NAMES = NO
 # Ukrainian and Vietnamese.
 # The default value is: English.
 
-OUTPUT_LANGUAGE = English
+OUTPUT_LANGUAGE = Japanese-en
 
 # If the BRIEF_MEMBER_DESC tag is set to YES, doxygen will include brief member
 # descriptions after the members that are listed in the file and class
@@ -791,16 +791,9 @@ WARN_LOGFILE =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT = \
-    ../lib/as5048a \
     ../lib/ctrl/include \
-    ../lib/freertospp \
-    ../lib/icm20602 \
-    ../lib/ma730 \
     ../lib/maze/include \
     ../lib/maze/src \
-    ../lib/peripheral \
-    ../lib/utils \
-    ../lib/vl6180x \
     ../src \
     ../README.md
 

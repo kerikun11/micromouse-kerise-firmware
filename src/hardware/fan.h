@@ -25,6 +25,7 @@ class Fan {
         .timer_num = timer,
         .freq_hz = freq,
         .clk_cfg = LEDC_AUTO_CLK,
+        .deconfigure = false,
     };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
     // LEDC Channel

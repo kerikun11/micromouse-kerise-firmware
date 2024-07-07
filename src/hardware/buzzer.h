@@ -56,6 +56,7 @@ class Buzzer {
         .timer_num = timer_,
         .freq_hz = 5000,
         .clk_cfg = LEDC_AUTO_CLK,
+        .deconfigure = false,
     };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
     // LEDC Channel
